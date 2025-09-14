@@ -1,0 +1,10 @@
+# Build dependencies for Windows standalone executable
+pyinstaller>=5.13.0
+auto-py-to-exe>=2.34.0
+
+# Runtime dependencies (already in requirements.txt)
+esptool>=4.6.2
+pyserial>=3.5
+click>=8.1.7
+rich>=13.7.0
+platformio>=6.1.11

@@ -5,17 +5,16 @@ Handles detection and identification of ESP32 devices connected via USB.
 """
 
 import serial.tools.list_ports
-from typing import List, Dict, Optional
+from typing import List, Optional
 from dataclasses import dataclass
+import platform
+import sys
 
-
-@dataclass
 class ESP32Device:
     """Represents a detected ESP32 device"""
     port: str
     description: str
     chip_type: str
-    vid: Optional[int] = None
     pid: Optional[int] = None
     serial_number: Optional[str] = None
 
@@ -63,25 +62,20 @@ class DeviceDetector:
     ]
     
     @classmethod
-    def detect_esp32_devices(cls) -> List[ESP32Device]:
+    def detect_devices(cls) -> List[ESP32Device]:
         """
-        Scan for connected ESP32 devices
+        Detect all connected ESP32 devices
         
         Returns:
-            List of detected ESP32Device objects
+            List of ESP32Device objects for detected devices
         """
         devices = []
+        ports = serial.tools.list_ports.comports()
         
-        for port in serial.tools.list_ports.comports():
-            if cls._is_esp32_device(port):
-                device = ESP32Device(
-                    port=port.device,
-                    description=port.description,
-                    chip_type=cls._detect_chip_type(port),
-                    vid=port.vid,
-                    pid=port.pid,
-                    serial_number=port.serial_number
-                )
+        for port in ports:
+            # Check if this port matches known ESP32 USB IDs
+            device = cls._identify_esp32_device(port)
+            if device:
                 devices.append(device)
         
         return devices
