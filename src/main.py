@@ -5,15 +5,27 @@ ESP32 Firmware Flasher - Main Entry Point
 A user-friendly tool for flashing firmware to ESP32-based datalogger devices.
 """
 
-import click
 import sys
+import os
 from pathlib import Path
-from typing import Optional
 
-from .ui.cli import CLI
-from .device_detector import DeviceDetector
-from .firmware_handler import FirmwareHandler
-from .flash_controller import FlashController
+# Add the src directory to Python path for imports
+sys.path.insert(0, str(Path(__file__).parent))
+
+try:
+    from device_detector import DeviceDetector
+    from firmware_handler import FirmwareHandler
+    from flash_controller import FlashController
+    from ui.cli import CLI
+except ImportError:
+    # Fallback for PyInstaller builds
+    from src.device_detector import DeviceDetector
+    from src.firmware_handler import FirmwareHandler
+    from src.flash_controller import FlashController
+    from src.ui.cli import CLI
+
+import click
+from typing import Optional
 
 
 @click.group()

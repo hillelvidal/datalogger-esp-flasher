@@ -30,12 +30,13 @@ block_cipher = None
 # Define the main application
 a = Analysis(
     ['src/main.py'],
-    pathex=[],
+    pathex=['.'],
     binaries=[],
     datas=[
         ('firmware/', 'firmware/'),
         ('README.md', '.'),
         ('USAGE.md', '.'),
+        ('src/', 'src/'),
     ],
     hiddenimports=[
         'serial',
@@ -50,6 +51,12 @@ a = Analysis(
         'rich.text',
         'esptool',
         'platformio',
+        'src.device_detector',
+        'src.firmware_handler',
+        'src.flash_controller',
+        'src.ui.cli',
+        'src.utils.config',
+        'src.utils.logger',
     ],
     hookspath=[],
     hooksconfig={},
