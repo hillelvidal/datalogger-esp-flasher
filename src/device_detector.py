@@ -5,7 +5,7 @@ Handles detection and identification of ESP32 devices connected via USB.
 """
 
 import serial.tools.list_ports
-from typing import List, Optional
+from typing import List, Optional, Dict
 from dataclasses import dataclass
 import platform
 import sys

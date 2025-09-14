@@ -24,19 +24,21 @@ def check_pyinstaller():
 def create_spec_file():
     """Create PyInstaller spec file for Windows build"""
     spec_content = '''# -*- mode: python ; coding: utf-8 -*-
+import sys
+import os
+sys.path.insert(0, os.path.abspath('.'))
 
 block_cipher = None
 
 # Define the main application
 a = Analysis(
     ['src/main.py'],
-    pathex=['.'],
+    pathex=[os.path.abspath('.'), os.path.abspath('src')],
     binaries=[],
     datas=[
         ('firmware/', 'firmware/'),
         ('README.md', '.'),
         ('USAGE.md', '.'),
-        ('src/', 'src/'),
     ],
     hiddenimports=[
         'serial',
@@ -51,12 +53,6 @@ a = Analysis(
         'rich.text',
         'esptool',
         'platformio',
-        'src.device_detector',
-        'src.firmware_handler',
-        'src.flash_controller',
-        'src.ui.cli',
-        'src.utils.config',
-        'src.utils.logger',
     ],
     hookspath=[],
     hooksconfig={},
