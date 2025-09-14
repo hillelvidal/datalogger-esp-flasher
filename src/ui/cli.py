@@ -29,7 +29,7 @@ class CLI:
     
     def __init__(self):
         self.console = console
-        self.device_detector = DeviceDetector()
+        # DeviceDetector uses class methods, no instance needed
         self.firmware_handler = FirmwareHandler()
         self.flash_controller = FlashController()
         
@@ -53,7 +53,7 @@ class CLI:
             
             # Simulate some scanning time for better UX
             time.sleep(0.5)
-            devices = self.device_detector.detect_esp32_devices()
+            devices = DeviceDetector.detect_esp32_devices()
             
             progress.update(task, description="✅ Device scan completed")
             time.sleep(0.3)
@@ -282,7 +282,7 @@ class CLI:
     
     def list_all_ports(self):
         """List all available serial ports for debugging"""
-        ports = self.device_detector.list_all_ports()
+        ports = DeviceDetector.list_all_ports()
         
         if not ports:
             self.console.print("No serial ports found")

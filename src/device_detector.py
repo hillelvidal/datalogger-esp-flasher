@@ -62,7 +62,7 @@ class DeviceDetector:
     ]
     
     @classmethod
-    def detect_devices(cls) -> List[ESP32Device]:
+    def detect_esp32_devices(cls) -> List[ESP32Device]:
         """
         Detect all connected ESP32 devices
         
