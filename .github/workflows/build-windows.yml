@@ -1,0 +1,64 @@
+name: Build Windows Executable
+
+on:
+  push:
+    tags:
+      - 'v*'  # Trigger on version tags like v1.0, v1.1, etc.
+  workflow_dispatch:  # Allow manual triggering
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+        
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements-build.txt
+        
+    - name: Build executable
+      run: python build_windows.py
+      
+    - name: Upload executable artifact
+      uses: actions/upload-artifact@v3
+      with:
+        name: esp32-flasher-windows
+        path: dist/esp32-flasher.exe
+        
+    - name: Create Release (if tag)
+      if: startsWith(github.ref, 'refs/tags/')
+      uses: softprops/action-gh-release@v1
+      with:
+        files: dist/esp32-flasher.exe
+        name: ESP32 Firmware Flasher ${{ github.ref_name }}
+        body: |
+          ## ESP32 Firmware Flasher ${{ github.ref_name }}
+          
+          ### Windows Standalone Executable
+          - Download `esp32-flasher.exe` 
+          - No Python installation required
+          - Includes all dependencies (~50-80MB)
+          
+          ### Usage:
+          ```cmd
+          esp32-flasher.exe flash
+          esp32-flasher.exe list-devices
+          esp32-flasher.exe --help
+          ```
+          
+          ### Requirements:
+          - Windows 10/11
+          - USB drivers (CP210x, CH340, or FTDI)
+          
+        draft: false
+        prerelease: false
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
