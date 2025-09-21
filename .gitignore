@@ -150,3 +150,32 @@ logs/
 /obj/
 /bin/Debug
 /bin/Release
+
+# Additional ignores (nested and cross-platform)
+# Visual Studio
+.vs/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+# .NET build outputs (any depth)
+**/bin/**
+**/obj/**
+
+# NuGet
+*.nupkg
+*.snupkg
+packages/
+
+# Rider/JetBrains
+.idea/
+.fleet/
+
+# Cache/Temp
+*.cache
+*.tmp
+
+# Service account credentials (kept locally only)
+winforms-flasher/*.json
+!winforms-flasher/firebase-config.json.template
