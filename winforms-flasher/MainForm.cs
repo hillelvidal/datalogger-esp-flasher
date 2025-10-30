@@ -22,6 +22,9 @@ namespace ESPFlasher
         private List<FirmwareVersion> _firmwareVersions = new();
         private List<EspDevice> _espDevices = new();
         private CancellationTokenSource? _flashCancellationTokenSource;
+        private string? _localFirmwarePath;
+        private string? _lastFirmwareFolder;
+        private const string SettingsFile = "flasher-settings.json";
 
         public MainForm(ILogger<MainForm> logger)
         {
@@ -53,8 +56,23 @@ namespace ESPFlasher
 
         private async void MainForm_Load(object sender, EventArgs e)
         {
+            // Load saved settings
+            LoadSettings();
+            
+            // Try to load last firmware folder FIRST (priority over remote)
+            if (!string.IsNullOrEmpty(_lastFirmwareFolder) && Directory.Exists(_lastFirmwareFolder))
+            {
+                LoadFirmwareFromFolder(_lastFirmwareFolder);
+            }
+            
             await InitializeFirestoreAsync();
-            await RefreshFirmwareVersionsAsync();
+            
+            // Only load remote firmware if no local firmware is selected
+            if (string.IsNullOrEmpty(_localFirmwarePath))
+            {
+                await RefreshFirmwareVersionsAsync();
+            }
+            
             await RefreshDevicesAsync();
         }
 
@@ -253,27 +271,77 @@ namespace ESPFlasher
 
         private void UpdateFlashButtonState()
         {
-            btnFlash.Enabled = cmbFirmwareVersion.SelectedItem != null && 
-                              listBoxDevices.SelectedItem != null &&
-                              _flashCancellationTokenSource == null;
+            bool hasFirmware = !string.IsNullOrEmpty(_localFirmwarePath) || cmbFirmwareVersion.SelectedItem != null;
+            bool hasDevice = listBoxDevices.SelectedItem != null;
+            bool notFlashing = _flashCancellationTokenSource == null;
+            
+            btnFlash.Enabled = hasFirmware && hasDevice && notFlashing;
         }
 
         private async void btnFlash_Click(object sender, EventArgs e)
         {
-            if (cmbFirmwareVersion.SelectedItem is not FirmwareVersion selectedFirmware ||
-                listBoxDevices.SelectedItem is not EspDevice selectedDevice)
+            if (listBoxDevices.SelectedItem is not EspDevice selectedDevice)
             {
-                MessageBox.Show("Please select both a firmware version and a target device.", "Selection Required", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                MessageBox.Show("Please select a target device.", "Selection Required", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
 
-            var result = MessageBox.Show(
-                $"Are you sure you want to flash firmware {selectedFirmware.Version} to device {selectedDevice.PortName}?\n\nThis will erase the current firmware on the device.",
-                "Confirm Flash Operation",
-                MessageBoxButtons.YesNo,
-                MessageBoxIcon.Question);
+            // Check if we're using local firmware or Firebase firmware
+            string firmwarePath;
+            string firmwareName;
+            
+            if (!string.IsNullOrEmpty(_localFirmwarePath))
+            {
+                // Using local firmware
+                firmwarePath = _localFirmwarePath;
+                firmwareName = Path.GetFileName(_localFirmwarePath);
+            }
+            else if (cmbFirmwareVersion.SelectedItem is FirmwareVersion selectedFirmware)
+            {
+                // Using Firebase firmware
+                firmwareName = selectedFirmware.Version;
+                
+                // Download if needed
+                if (_downloadService.IsFirmwareDownloaded(selectedFirmware))
+                {
+                    firmwarePath = _downloadService.GetLocalFirmwarePath(selectedFirmware);
+                    lblStatus.Text = "Using cached firmware";
+                }
+                else
+                {
+                    try
+                    {
+                        lblStatus.Text = "Downloading firmware...";
+                        firmwarePath = await _downloadService.DownloadFirmwareAsync(selectedFirmware);
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, "Failed to download firmware");
+                        MessageBox.Show($"Failed to download firmware: {ex.Message}", "Download Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        return;
+                    }
+                }
+            }
+            else
+            {
+                MessageBox.Show("Please select a firmware version or browse for a local file.", "Selection Required", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
 
-            if (result != DialogResult.Yes)
+            // Show device preparation instructions
+            var prepResult = MessageBox.Show(
+                $"Prepare ESP32-S3 for flashing:\n\n" +
+                $"1. Hold BOOT button\n" +
+                $"2. Press and release RESET button\n" +
+                $"3. Release BOOT button\n\n" +
+                $"Device: {selectedDevice.PortName}\n" +
+                $"Firmware: {firmwareName}\n\n" +
+                $"Ready to flash?",
+                "Prepare Device for Flashing",
+                MessageBoxButtons.YesNo,
+                MessageBoxIcon.Information);
+
+            if (prepResult != DialogResult.Yes)
                 return;
 
             try
@@ -284,20 +352,7 @@ namespace ESPFlasher
                 progressBarFlash.Visible = true;
                 progressBarFlash.Value = 0;
 
-                // Step 1: Download firmware if needed
-                string firmwarePath;
-                if (_downloadService.IsFirmwareDownloaded(selectedFirmware))
-                {
-                    firmwarePath = _downloadService.GetLocalFirmwarePath(selectedFirmware);
-                    lblStatus.Text = "Using cached firmware";
-                }
-                else
-                {
-                    lblStatus.Text = "Downloading firmware...";
-                    firmwarePath = await _downloadService.DownloadFirmwareAsync(selectedFirmware);
-                }
-
-                // Step 2: Flash firmware
+                // Flash firmware
                 var success = await _flashingService.FlashFirmwareAsync(
                     firmwarePath, 
                     selectedDevice, 
@@ -306,7 +361,7 @@ namespace ESPFlasher
                 if (success)
                 {
                     MessageBox.Show(
-                        $"Firmware {selectedFirmware.Version} has been successfully flashed to {selectedDevice.PortName}!",
+                        $"Firmware '{firmwareName}' has been successfully flashed to {selectedDevice.PortName}!",
                         "Flash Successful",
                         MessageBoxButtons.OK,
                         MessageBoxIcon.Information);
@@ -408,6 +463,105 @@ namespace ESPFlasher
             }
 
             lblStatus.Text = status;
+        }
+
+        private void btnBrowseLocal_Click(object sender, EventArgs e)
+        {
+            using var folderDialog = new FolderBrowserDialog
+            {
+                Description = "Select folder containing firmware files (bootloader.bin, partitions.bin, firmware.bin)",
+                ShowNewFolderButton = false,
+                SelectedPath = _lastFirmwareFolder ?? Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments)
+            };
+
+            if (folderDialog.ShowDialog() == DialogResult.Yes)
+            {
+                var folder = folderDialog.SelectedPath;
+                LoadFirmwareFromFolder(folder);
+                
+                // Save this folder for next time
+                _lastFirmwareFolder = folder;
+                SaveSettings();
+            }
+        }
+        
+        private void LoadFirmwareFromFolder(string folder)
+        {
+            var firmwarePath = Path.Combine(folder, "firmware.bin");
+            var bootloaderPath = Path.Combine(folder, "bootloader.bin");
+            var partitionsPath = Path.Combine(folder, "partitions.bin");
+            
+            bool hasFirmware = File.Exists(firmwarePath);
+            bool hasBootloader = File.Exists(bootloaderPath);
+            bool hasPartitions = File.Exists(partitionsPath);
+            
+            if (!hasFirmware)
+            {
+                MessageBox.Show(
+                    $"firmware.bin not found in selected folder:\n{folder}\n\nPlease select a folder containing firmware.bin",
+                    "Firmware Not Found",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Warning);
+                return;
+            }
+            
+            _localFirmwarePath = firmwarePath;
+            var folderName = Path.GetFileName(folder);
+            
+            cmbFirmwareVersion.Items.Clear();
+            cmbFirmwareVersion.Items.Add($"[Local] {folderName}");
+            cmbFirmwareVersion.SelectedIndex = 0;
+            
+            var status = hasBootloader && hasPartitions 
+                ? "✓ Complete flash (bootloader + partitions + app)"
+                : "⚠ App only (bootloader/partitions not found)";
+                
+            lblFirmwareStatus.Text = status;
+            lblStatus.Text = $"Local firmware loaded: {folderName}";
+            
+            _logger.LogInformation($"Local firmware folder: {folder}");
+            _logger.LogInformation($"Firmware: {hasFirmware}, Bootloader: {hasBootloader}, Partitions: {hasPartitions}");
+            
+            UpdateFlashButtonState();
+        }
+        
+        private void LoadSettings()
+        {
+            try
+            {
+                if (File.Exists(SettingsFile))
+                {
+                    var json = File.ReadAllText(SettingsFile);
+                    var settings = Newtonsoft.Json.JsonConvert.DeserializeObject<Dictionary<string, string>>(json);
+                    if (settings != null && settings.ContainsKey("LastFirmwareFolder"))
+                    {
+                        _lastFirmwareFolder = settings["LastFirmwareFolder"];
+                        _logger.LogInformation($"Loaded last firmware folder: {_lastFirmwareFolder}");
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to load settings");
+            }
+        }
+        
+        private void SaveSettings()
+        {
+            try
+            {
+                var settings = new Dictionary<string, string>
+                {
+                    ["LastFirmwareFolder"] = _lastFirmwareFolder ?? ""
+                };
+                var json = Newtonsoft.Json.JsonConvert.SerializeObject(settings, Newtonsoft.Json.Formatting.Indented);
+                File.WriteAllText(SettingsFile, json);
+                _logger.LogInformation("Settings saved");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to save settings");
+            }
         }
 
         protected override void OnFormClosing(FormClosingEventArgs e)

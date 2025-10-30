@@ -107,14 +107,42 @@ namespace ESPFlasher.Services
 
         private async Task<bool> EraseFlashAsync(string portName, CancellationToken cancellationToken)
         {
-            var args = $"--port {portName} erase_flash";
+            var args = $"--port {portName} --chip esp32s3 --before default-reset --after hard-reset erase-flash";
             var result = await RunEsptoolAsync(args, cancellationToken);
-            return result.Contains("Chip erase completed successfully");
+            return result.Contains("erased successfully") || result.Contains("Chip erase completed");
         }
 
         private async Task<bool> WriteFirmwareAsync(string firmwarePath, string portName, CancellationToken cancellationToken)
         {
-            var args = $"--port {portName} --baud 460800 write_flash 0x0 \"{firmwarePath}\"";
+            // Check if we have bootloader and partitions files in the same directory
+            var firmwareDir = Path.GetDirectoryName(firmwarePath);
+            var bootloaderPath = Path.Combine(firmwareDir ?? "", "bootloader.bin");
+            var partitionsPath = Path.Combine(firmwareDir ?? "", "partitions.bin");
+            
+            bool hasBootloader = File.Exists(bootloaderPath);
+            bool hasPartitions = File.Exists(partitionsPath);
+            
+            _logger.LogInformation($"Bootloader found: {hasBootloader}, Partitions found: {hasPartitions}");
+            
+            // Build the flash command with all available files
+            var args = $"--port {portName} --chip esp32s3 --baud 460800 --before default-reset --after hard-reset write-flash --flash-mode dio --flash-freq 80m --flash-size detect";
+            
+            if (hasBootloader)
+            {
+                args += $" 0x0 \"{bootloaderPath}\"";
+                _logger.LogInformation("Including bootloader at 0x0");
+            }
+            
+            if (hasPartitions)
+            {
+                args += $" 0x8000 \"{partitionsPath}\"";
+                _logger.LogInformation("Including partitions at 0x8000");
+            }
+            
+            // Always include the main firmware at 0x10000
+            args += $" 0x10000 \"{firmwarePath}\"";
+            _logger.LogInformation("Including firmware at 0x10000");
+            
             var result = await RunEsptoolAsync(args, cancellationToken, true);
             return result.Contains("Hash of data verified") || result.Contains("Leaving");
         }
@@ -123,7 +151,8 @@ namespace ESPFlasher.Services
         {
             try
             {
-                var args = $"--port {portName} verify_flash 0x0 \"{firmwarePath}\"";
+                // Verify the app region at 0x10000 to match write-flash
+                var args = $"--port {portName} verify-flash 0x10000 \"{firmwarePath}\"";
                 var result = await RunEsptoolAsync(args, cancellationToken);
                 return result.Contains("Verify successful");
             }
