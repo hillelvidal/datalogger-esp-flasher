@@ -25,80 +25,104 @@ namespace ESPFlasher.Services
 
         public async Task<string> DownloadFirmwareAsync(FirmwareVersion firmware)
         {
-            var localPath = Path.Combine(_downloadDirectory, firmware.LocalFileName);
+            // Create version-specific folder
+            var versionFolder = Path.Combine(_downloadDirectory, firmware.LocalFolderName);
+            Directory.CreateDirectory(versionFolder);
             
-            // Check if file already exists and is valid
-            if (File.Exists(localPath))
+            var firmwarePath = Path.Combine(versionFolder, "firmware.bin");
+            
+            // Check if already downloaded
+            if (IsFirmwareDownloaded(firmware))
             {
-                if (await ValidateFirmwareFileAsync(localPath, firmware))
-                {
-                    _logger.LogInformation($"Firmware {firmware.Version} already exists and is valid");
-                    return localPath;
-                }
-                else
-                {
-                    _logger.LogWarning($"Existing firmware file is invalid, re-downloading");
-                    File.Delete(localPath);
-                }
+                _logger.LogInformation($"Firmware {firmware.Version} already downloaded");
+                return firmwarePath;
             }
 
-            _logger.LogInformation($"Downloading firmware {firmware.Version} from {firmware.StorageUrl}");
+            _logger.LogInformation($"Downloading firmware {firmware.Version} (all files)");
 
             try
             {
-                using var response = await _httpClient.GetAsync(firmware.StorageUrl, HttpCompletionOption.ResponseHeadersRead);
-                response.EnsureSuccessStatusCode();
-
-                var totalBytes = response.Content.Headers.ContentLength ?? firmware.FileSize;
-                var downloadedBytes = 0L;
-
-                using var contentStream = await response.Content.ReadAsStreamAsync();
-                using var fileStream = new FileStream(localPath, FileMode.Create, FileAccess.Write, FileShare.None, 8192, true);
-
-                var buffer = new byte[8192];
-                int bytesRead;
-
-                while ((bytesRead = await contentStream.ReadAsync(buffer, 0, buffer.Length)) > 0)
+                // Download firmware.bin (required)
+                await DownloadFileAsync(firmware.FirmwareUrl, firmwarePath, firmware.FileSize);
+                
+                // Download bootloader.bin (if available)
+                if (!string.IsNullOrEmpty(firmware.BootloaderUrl))
                 {
-                    await fileStream.WriteAsync(buffer, 0, bytesRead);
-                    downloadedBytes += bytesRead;
-
-                    var progressPercentage = totalBytes > 0 ? (int)((downloadedBytes * 100) / totalBytes) : 0;
-                    DownloadProgressChanged?.Invoke(this, new DownloadProgressEventArgs(progressPercentage, downloadedBytes, totalBytes));
-                }
-
-                _logger.LogInformation($"Download completed: {localPath}");
-
-                // Validate the downloaded file
-                if (await ValidateFirmwareFileAsync(localPath, firmware))
-                {
-                    _logger.LogInformation($"Firmware {firmware.Version} downloaded and validated successfully");
-                    return localPath;
+                    var bootloaderPath = Path.Combine(versionFolder, "bootloader.bin");
+                    await DownloadFileAsync(firmware.BootloaderUrl, bootloaderPath, 0);
+                    _logger.LogInformation("Bootloader downloaded");
                 }
                 else
                 {
-                    File.Delete(localPath);
-                    throw new InvalidOperationException("Downloaded firmware file failed validation");
+                    _logger.LogWarning("No bootloader URL provided");
                 }
+                
+                // Download partitions.bin (if available)
+                if (!string.IsNullOrEmpty(firmware.PartitionsUrl))
+                {
+                    var partitionsPath = Path.Combine(versionFolder, "partitions.bin");
+                    await DownloadFileAsync(firmware.PartitionsUrl, partitionsPath, 0);
+                    _logger.LogInformation("Partitions downloaded");
+                }
+                else
+                {
+                    _logger.LogWarning("No partitions URL provided");
+                }
+
+                _logger.LogInformation($"Firmware {firmware.Version} downloaded successfully to {versionFolder}");
+                return firmwarePath;
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, $"Failed to download firmware {firmware.Version}");
                 
                 // Clean up partial download
-                if (File.Exists(localPath))
+                if (Directory.Exists(versionFolder))
                 {
-                    File.Delete(localPath);
+                    Directory.Delete(versionFolder, true);
                 }
                 
                 throw;
             }
         }
+        
+        private async Task DownloadFileAsync(string url, string localPath, long expectedSize)
+        {
+            using var response = await _httpClient.GetAsync(url, HttpCompletionOption.ResponseHeadersRead);
+            response.EnsureSuccessStatusCode();
+
+            var totalBytes = response.Content.Headers.ContentLength ?? expectedSize;
+            var downloadedBytes = 0L;
+
+            using var contentStream = await response.Content.ReadAsStreamAsync();
+            using var fileStream = new FileStream(localPath, FileMode.Create, FileAccess.Write, FileShare.None, 8192, true);
+
+            var buffer = new byte[8192];
+            int bytesRead;
+
+            while ((bytesRead = await contentStream.ReadAsync(buffer, 0, buffer.Length)) > 0)
+            {
+                await fileStream.WriteAsync(buffer, 0, bytesRead);
+                downloadedBytes += bytesRead;
+
+                var progressPercentage = totalBytes > 0 ? (int)((downloadedBytes * 100) / totalBytes) : 0;
+                DownloadProgressChanged?.Invoke(this, new DownloadProgressEventArgs(progressPercentage, downloadedBytes, totalBytes));
+            }
+
+            _logger.LogInformation($"Downloaded: {Path.GetFileName(localPath)} ({downloadedBytes} bytes)");
+        }
 
         public bool IsFirmwareDownloaded(FirmwareVersion firmware)
         {
-            var localPath = Path.Combine(_downloadDirectory, firmware.LocalFileName);
-            return File.Exists(localPath);
+            var versionFolder = Path.Combine(_downloadDirectory, firmware.LocalFolderName);
+            var firmwarePath = Path.Combine(versionFolder, "firmware.bin");
+            return File.Exists(firmwarePath);
+        }
+        
+        public string GetLocalFirmwarePath(FirmwareVersion firmware)
+        {
+            var versionFolder = Path.Combine(_downloadDirectory, firmware.LocalFolderName);
+            return Path.Combine(versionFolder, "firmware.bin");
         }
 
         public async Task<bool> ValidateFirmwareFileAsync(string filePath, FirmwareVersion firmware)
@@ -143,11 +167,6 @@ namespace ESPFlasher.Services
             using var stream = File.OpenRead(filePath);
             var hash = await Task.Run(() => sha256.ComputeHash(stream));
             return Convert.ToHexString(hash).ToLowerInvariant();
-        }
-
-        public string GetLocalFirmwarePath(FirmwareVersion firmware)
-        {
-            return Path.Combine(_downloadDirectory, firmware.LocalFileName);
         }
 
         public void ClearCache()

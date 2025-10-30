@@ -11,8 +11,13 @@ namespace ESPFlasher.Models
         [FirestoreProperty("description")]
         public string Description { get; set; } = string.Empty;
 
+        // Legacy single file support (backward compatible)
         [FirestoreProperty("storageUrl")]
         public string StorageUrl { get; set; } = string.Empty;
+
+        // New multi-file support
+        [FirestoreProperty("files")]
+        public Dictionary<string, string>? Files { get; set; }
 
         [FirestoreProperty("releaseDate")]
         public DateTime ReleaseDate { get; set; }
@@ -28,6 +33,16 @@ namespace ESPFlasher.Models
 
         public string DisplayText => $"v{Version} - {Description} ({ReleaseDate:yyyy-MM-dd})";
         
-        public string LocalFileName => $"firmware_v{Version}.bin";
+        // Local folder for this version (contains all 3 files)
+        public string LocalFolderName => $"v{Version}";
+        
+        // Helper properties to get file URLs
+        public string FirmwareUrl => Files?.GetValueOrDefault("firmware") ?? StorageUrl;
+        public string? BootloaderUrl => Files?.GetValueOrDefault("bootloader");
+        public string? PartitionsUrl => Files?.GetValueOrDefault("partitions");
+        
+        public bool HasAllFiles => !string.IsNullOrEmpty(FirmwareUrl) && 
+                                   !string.IsNullOrEmpty(BootloaderUrl) && 
+                                   !string.IsNullOrEmpty(PartitionsUrl);
     }
 }

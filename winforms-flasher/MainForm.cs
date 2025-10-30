@@ -33,6 +33,20 @@ namespace ESPFlasher
             InitializeServices();
             SetupEventHandlers();
             
+            // Set application icon
+            try
+            {
+                var iconPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "flash.ico");
+                if (File.Exists(iconPath))
+                {
+                    this.Icon = new Icon(iconPath);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to load application icon");
+            }
+            
             // Initialize UI state
             btnFlash.Enabled = false;
             btnRefreshDevices.Enabled = true;
@@ -65,13 +79,8 @@ namespace ESPFlasher
                 LoadFirmwareFromFolder(_lastFirmwareFolder);
             }
             
-            await InitializeFirestoreAsync();
-            
-            // Only load remote firmware if no local firmware is selected
-            if (string.IsNullOrEmpty(_localFirmwarePath))
-            {
-                await RefreshFirmwareVersionsAsync();
-            }
+            // Don't auto-load Firebase - it's on-demand via Refresh button
+            // This makes startup faster and local mode primary
             
             await RefreshDevicesAsync();
         }
@@ -193,8 +202,19 @@ namespace ESPFlasher
 
             try
             {
-                lblStatus.Text = "Loading firmware versions...";
+                lblStatus.Text = "Loading firmware versions from cloud...";
+                
+                // Remember if we had local firmware selected
+                var hadLocalFirmware = !string.IsNullOrEmpty(_localFirmwarePath);
+                var localFirmwareName = hadLocalFirmware ? cmbFirmwareVersion.Text : null;
+                
                 cmbFirmwareVersion.Items.Clear();
+                
+                // Re-add local firmware first if it was selected
+                if (hadLocalFirmware && !string.IsNullOrEmpty(localFirmwareName))
+                {
+                    cmbFirmwareVersion.Items.Add(localFirmwareName);
+                }
                 
                 _firmwareVersions = await _firestoreService.GetFirmwareVersionsAsync();
                 
@@ -203,14 +223,23 @@ namespace ESPFlasher
                     cmbFirmwareVersion.Items.Add(version);
                 }
 
-                // Select the latest version by default
-                var latestVersion = _firmwareVersions.FirstOrDefault(v => v.IsLatest) ?? _firmwareVersions.FirstOrDefault();
-                if (latestVersion != null)
+                // Restore selection
+                if (hadLocalFirmware && !string.IsNullOrEmpty(localFirmwareName))
                 {
-                    cmbFirmwareVersion.SelectedItem = latestVersion;
+                    cmbFirmwareVersion.SelectedIndex = 0; // Select local firmware
+                    lblStatus.Text = $"Loaded {_firmwareVersions.Count} cloud versions (local firmware kept)";
                 }
-
-                lblStatus.Text = $"Loaded {_firmwareVersions.Count} firmware versions";
+                else
+                {
+                    // Select the latest version by default
+                    var latestVersion = _firmwareVersions.FirstOrDefault(v => v.IsLatest) ?? _firmwareVersions.FirstOrDefault();
+                    if (latestVersion != null)
+                    {
+                        cmbFirmwareVersion.SelectedItem = latestVersion;
+                    }
+                    lblStatus.Text = $"Loaded {_firmwareVersions.Count} firmware versions";
+                }
+                
                 _logger.LogInformation($"Loaded {_firmwareVersions.Count} firmware versions");
             }
             catch (Exception ex)
@@ -410,6 +439,27 @@ namespace ESPFlasher
 
         private async void btnRefreshFirmware_Click(object sender, EventArgs e)
         {
+            // Initialize Firebase if not already done
+            if (_firestoreService == null)
+            {
+                lblStatus.Text = "Connecting to Firebase...";
+                await InitializeFirestoreAsync();
+            }
+            
+            if (_firestoreService == null)
+            {
+                MessageBox.Show(
+                    "Firebase connection failed. Please check:\n\n" +
+                    "1. Firebase credentials file exists\n" +
+                    "2. Internet connection is active\n\n" +
+                    "You can still use local firmware via 'Browse Folder'.",
+                    "Firebase Connection Failed",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Warning);
+                lblStatus.Text = "Firebase connection failed - using local mode only";
+                return;
+            }
+            
             await RefreshFirmwareVersionsAsync();
         }
 

@@ -115,7 +115,7 @@ namespace ESPFlasher
             this.cmbFirmwareVersion.FormattingEnabled = true;
             this.cmbFirmwareVersion.Location = new Point(15, 40);
             this.cmbFirmwareVersion.Name = "cmbFirmwareVersion";
-            this.cmbFirmwareVersion.Size = new Size(440, 23);
+            this.cmbFirmwareVersion.Size = new Size(310, 23);
             this.cmbFirmwareVersion.TabIndex = 1;
             this.cmbFirmwareVersion.SelectedIndexChanged += this.cmbFirmwareVersion_SelectedIndexChanged;
             // 
