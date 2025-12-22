@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading;
@@ -24,6 +25,7 @@ namespace ESPFlasher
         private CancellationTokenSource? _flashCancellationTokenSource;
         private string? _localFirmwarePath;
         private string? _lastFirmwareFolder;
+        private readonly Dictionary<string, string> _localFirmwareFolders = new();
         private const string SettingsFile = "flasher-settings.json";
 
         public MainForm(ILogger<MainForm> logger)
@@ -78,6 +80,8 @@ namespace ESPFlasher
             {
                 LoadFirmwareFromFolder(_lastFirmwareFolder);
             }
+            
+            DiscoverLocalFirmwareFolders();
             
             // Don't auto-load Firebase - it's on-demand via Refresh button
             // This makes startup faster and local mode primary
@@ -210,10 +214,9 @@ namespace ESPFlasher
                 
                 cmbFirmwareVersion.Items.Clear();
                 
-                // Re-add local firmware first if it was selected
-                if (hadLocalFirmware && !string.IsNullOrEmpty(localFirmwareName))
+                foreach (var localDisplay in _localFirmwareFolders.Keys)
                 {
-                    cmbFirmwareVersion.Items.Add(localFirmwareName);
+                    cmbFirmwareVersion.Items.Add(localDisplay);
                 }
                 
                 _firmwareVersions = await _firestoreService.GetFirmwareVersionsAsync();
@@ -224,9 +227,9 @@ namespace ESPFlasher
                 }
 
                 // Restore selection
-                if (hadLocalFirmware && !string.IsNullOrEmpty(localFirmwareName))
+                if (hadLocalFirmware && !string.IsNullOrEmpty(localFirmwareName) && _localFirmwareFolders.ContainsKey(localFirmwareName))
                 {
-                    cmbFirmwareVersion.SelectedIndex = 0; // Select local firmware
+                    cmbFirmwareVersion.SelectedItem = localFirmwareName;
                     lblStatus.Text = $"Loaded {_firmwareVersions.Count} cloud versions (local firmware kept)";
                 }
                 else
@@ -300,7 +303,9 @@ namespace ESPFlasher
 
         private void UpdateFlashButtonState()
         {
-            bool hasFirmware = !string.IsNullOrEmpty(_localFirmwarePath) || cmbFirmwareVersion.SelectedItem != null;
+            bool hasValidLocalFirmware = !string.IsNullOrEmpty(_localFirmwarePath);
+            bool hasCloudFirmware = cmbFirmwareVersion.SelectedItem is FirmwareVersion;
+            bool hasFirmware = hasValidLocalFirmware || hasCloudFirmware;
             bool hasDevice = listBoxDevices.SelectedItem != null;
             bool notFlashing = _flashCancellationTokenSource == null;
             
@@ -465,14 +470,50 @@ namespace ESPFlasher
 
         private void cmbFirmwareVersion_SelectedIndexChanged(object sender, EventArgs e)
         {
-            UpdateFlashButtonState();
-            
             if (cmbFirmwareVersion.SelectedItem is FirmwareVersion selectedFirmware)
             {
+                _localFirmwarePath = null;
+                
                 var isDownloaded = _downloadService.IsFirmwareDownloaded(selectedFirmware);
                 var status = isDownloaded ? "✓ Downloaded" : "⬇ Will download";
                 lblFirmwareStatus.Text = $"{status} - {selectedFirmware.FileSize / 1024 / 1024:F1} MB";
             }
+            else if (cmbFirmwareVersion.SelectedItem is string localDisplay &&
+                     _localFirmwareFolders.TryGetValue(localDisplay, out var folder))
+            {
+                var firmwarePath = Path.Combine(folder, "firmware.bin");
+                var bootloaderPath = Path.Combine(folder, "bootloader.bin");
+                var partitionsPath = Path.Combine(folder, "partitions.bin");
+                
+                var hasFirmware = File.Exists(firmwarePath);
+                var hasBootloader = File.Exists(bootloaderPath);
+                var hasPartitions = File.Exists(partitionsPath);
+                
+                if (!hasFirmware || !hasBootloader || !hasPartitions)
+                {
+                    MessageBox.Show(
+                        $"Selected folder is missing required files.\n\nRequired: firmware.bin, bootloader.bin, partitions.bin\nFolder: {folder}",
+                        "Incomplete Firmware Folder",
+                        MessageBoxButtons.OK,
+                        MessageBoxIcon.Warning);
+                    _localFirmwarePath = null;
+                    lblFirmwareStatus.Text = "Selected folder is missing required firmware files";
+                }
+                else
+                {
+                    _localFirmwarePath = firmwarePath;
+
+                    var status = "✓ Complete flash (bootloader + partitions + app)";
+
+                    lblFirmwareStatus.Text = status;
+                    lblStatus.Text = $"Local firmware loaded: {Path.GetFileName(folder)}";
+
+                    _logger.LogInformation($"Local firmware folder: {folder}");
+                    _logger.LogInformation($"Firmware: {hasFirmware}, Bootloader: {hasBootloader}, Partitions: {hasPartitions}");
+                }
+            }
+
+            UpdateFlashButtonState();
         }
 
         private void listBoxDevices_SelectedIndexChanged(object sender, EventArgs e)
@@ -517,11 +558,21 @@ namespace ESPFlasher
 
         private void btnBrowseLocal_Click(object sender, EventArgs e)
         {
+            var initialPath = _lastFirmwareFolder;
+            if (string.IsNullOrEmpty(initialPath))
+            {
+                var baseDir = AppDomain.CurrentDomain.BaseDirectory;
+                var firmwareRoot = Path.Combine(baseDir, "firmware");
+                initialPath = Directory.Exists(firmwareRoot)
+                    ? firmwareRoot
+                    : Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
+            }
+
             using var folderDialog = new FolderBrowserDialog
             {
                 Description = "Select folder containing firmware files (bootloader.bin, partitions.bin, firmware.bin)",
                 ShowNewFolderButton = false,
-                SelectedPath = _lastFirmwareFolder ?? Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments)
+                SelectedPath = initialPath
             };
 
             if (folderDialog.ShowDialog() == DialogResult.Yes)
@@ -545,11 +596,11 @@ namespace ESPFlasher
             bool hasBootloader = File.Exists(bootloaderPath);
             bool hasPartitions = File.Exists(partitionsPath);
             
-            if (!hasFirmware)
+            if (!hasFirmware || !hasBootloader || !hasPartitions)
             {
                 MessageBox.Show(
-                    $"firmware.bin not found in selected folder:\n{folder}\n\nPlease select a folder containing firmware.bin",
-                    "Firmware Not Found",
+                    $"Selected folder is missing required files.\n\nRequired: firmware.bin, bootloader.bin, partitions.bin\nFolder: {folder}",
+                    "Incomplete Firmware Folder",
                     MessageBoxButtons.OK,
                     MessageBoxIcon.Warning);
                 return;
@@ -557,10 +608,16 @@ namespace ESPFlasher
             
             _localFirmwarePath = firmwarePath;
             var folderName = Path.GetFileName(folder);
+            var displayName = $"[Local] {folderName}";
             
-            cmbFirmwareVersion.Items.Clear();
-            cmbFirmwareVersion.Items.Add($"[Local] {folderName}");
-            cmbFirmwareVersion.SelectedIndex = 0;
+            _localFirmwareFolders[displayName] = folder;
+
+            if (!cmbFirmwareVersion.Items.Contains(displayName))
+            {
+                cmbFirmwareVersion.Items.Insert(0, displayName);
+            }
+
+            cmbFirmwareVersion.SelectedItem = displayName;
             
             var status = hasBootloader && hasPartitions 
                 ? "✓ Complete flash (bootloader + partitions + app)"
@@ -573,6 +630,68 @@ namespace ESPFlasher
             _logger.LogInformation($"Firmware: {hasFirmware}, Bootloader: {hasBootloader}, Partitions: {hasPartitions}");
             
             UpdateFlashButtonState();
+        }
+        
+        private void DiscoverLocalFirmwareFolders()
+        {
+            try
+            {
+                var baseDir = AppDomain.CurrentDomain.BaseDirectory;
+                var roots = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+                var firmwareRoot = Path.Combine(baseDir, "firmware");
+                if (Directory.Exists(firmwareRoot))
+                {
+                    roots.Add(firmwareRoot);
+                }
+
+                try
+                {
+                    var projectDir = Directory.GetParent(baseDir)?.Parent?.Parent?.Parent?.FullName;
+                    if (!string.IsNullOrEmpty(projectDir))
+                    {
+                        var projectFirmware = Path.Combine(projectDir, "firmware");
+                        if (Directory.Exists(projectFirmware))
+                        {
+                            roots.Add(projectFirmware);
+                        }
+                    }
+                }
+                catch
+                {
+                }
+
+                foreach (var root in roots)
+                {
+                    foreach (var folder in Directory.GetDirectories(root))
+                    {
+                        var firmwarePath = Path.Combine(folder, "firmware.bin");
+                        var bootloaderPath = Path.Combine(folder, "bootloader.bin");
+                        var partitionsPath = Path.Combine(folder, "partitions.bin");
+
+                        if (!File.Exists(firmwarePath) ||
+                            !File.Exists(bootloaderPath) ||
+                            !File.Exists(partitionsPath))
+                        {
+                            continue;
+                        }
+
+                        var folderName = Path.GetFileName(folder);
+                        var displayName = $"[Local] {folderName}";
+
+                        _localFirmwareFolders[displayName] = folder;
+
+                        if (!cmbFirmwareVersion.Items.Contains(displayName))
+                        {
+                            cmbFirmwareVersion.Items.Add(displayName);
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to discover local firmware folders");
+            }
         }
         
         private void LoadSettings()

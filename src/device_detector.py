@@ -81,6 +81,29 @@ class DeviceDetector:
         return devices
     
     @classmethod
+    def _identify_esp32_device(cls, port) -> Optional[ESP32Device]:
+        """
+        Identify if a port is an ESP32 device and create device object
+        
+        Args:
+            port: Serial port info object
+            
+        Returns:
+            ESP32Device if identified, None otherwise
+        """
+        if not cls._is_esp32_device(port):
+            return None
+        
+        device = ESP32Device()
+        device.port = port.device
+        device.description = port.description or 'Unknown'
+        device.chip_type = cls._detect_chip_type(port)
+        device.pid = port.pid
+        device.serial_number = port.serial_number
+        
+        return device
+    
+    @classmethod
     def _is_esp32_device(cls, port) -> bool:
         """
         Check if a serial port is likely an ESP32 device
