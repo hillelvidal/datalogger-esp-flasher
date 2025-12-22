@@ -561,11 +561,23 @@ namespace ESPFlasher
             var initialPath = _lastFirmwareFolder;
             if (string.IsNullOrEmpty(initialPath))
             {
-                var baseDir = AppDomain.CurrentDomain.BaseDirectory;
-                var firmwareRoot = Path.Combine(baseDir, "firmware");
-                initialPath = Directory.Exists(firmwareRoot)
-                    ? firmwareRoot
-                    : Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
+                var documents = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
+                var defaultRoot = Path.Combine(documents, "esp-flasher", "firmware");
+
+                try
+                {
+                    if (!Directory.Exists(defaultRoot))
+                    {
+                        Directory.CreateDirectory(defaultRoot);
+                    }
+                }
+                catch
+                {
+                }
+
+                initialPath = Directory.Exists(defaultRoot)
+                    ? defaultRoot
+                    : documents;
             }
 
             using var folderDialog = new FolderBrowserDialog
@@ -578,7 +590,7 @@ namespace ESPFlasher
             if (folderDialog.ShowDialog() == DialogResult.Yes)
             {
                 var folder = folderDialog.SelectedPath;
-                LoadFirmwareFromFolder(folder);
+                LoadFirmwareFromFolder(folder, showConfirmation: true);
                 
                 // Save this folder for next time
                 _lastFirmwareFolder = folder;
@@ -586,7 +598,7 @@ namespace ESPFlasher
             }
         }
         
-        private void LoadFirmwareFromFolder(string folder)
+        private void LoadFirmwareFromFolder(string folder, bool showConfirmation = false)
         {
             var firmwarePath = Path.Combine(folder, "firmware.bin");
             var bootloaderPath = Path.Combine(folder, "bootloader.bin");
@@ -608,7 +620,7 @@ namespace ESPFlasher
             
             _localFirmwarePath = firmwarePath;
             var folderName = Path.GetFileName(folder);
-            var displayName = $"[Local] {folderName}";
+            var displayName = folderName;
             
             _localFirmwareFolders[displayName] = folder;
 
@@ -630,6 +642,15 @@ namespace ESPFlasher
             _logger.LogInformation($"Firmware: {hasFirmware}, Bootloader: {hasBootloader}, Partitions: {hasPartitions}");
             
             UpdateFlashButtonState();
+
+            if (showConfirmation)
+            {
+                MessageBox.Show(
+                    $"Firmware folder selected successfully.\n\nName: {folderName}\nPath: {folder}",
+                    "Firmware Folder Selected",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Information);
+            }
         }
         
         private void DiscoverLocalFirmwareFolders()
@@ -643,6 +664,19 @@ namespace ESPFlasher
                 if (Directory.Exists(firmwareRoot))
                 {
                     roots.Add(firmwareRoot);
+                }
+
+                try
+                {
+                    var documents = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
+                    var documentsFirmware = Path.Combine(documents, "esp-flasher", "firmware");
+                    if (Directory.Exists(documentsFirmware))
+                    {
+                        roots.Add(documentsFirmware);
+                    }
+                }
+                catch
+                {
                 }
 
                 try
@@ -677,7 +711,7 @@ namespace ESPFlasher
                         }
 
                         var folderName = Path.GetFileName(folder);
-                        var displayName = $"[Local] {folderName}";
+                        var displayName = folderName;
 
                         _localFirmwareFolders[displayName] = folder;
 
