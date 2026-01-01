@@ -179,3 +179,15 @@ packages/
 # Service account credentials (kept locally only)
 winforms-flasher/*.json
 !winforms-flasher/firebase-config.json.template
+
+# WinForms build and publish outputs
+winforms-flasher/publish/
+winforms-flasher/esptool.exe
+
+# User settings
+flasher-settings.json
+
+# Test folders
+Datalogger Firmware Test/
+Datalogger Firmware Test-old-and-working/
+‏‏firmware - עותק/
