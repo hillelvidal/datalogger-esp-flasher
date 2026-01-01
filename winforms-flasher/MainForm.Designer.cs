@@ -35,6 +35,9 @@ namespace ESPFlasher
             this.tabControl = new TabControl();
             this.tabPageFlash = new TabPage();
             this.groupBoxFirmware = new GroupBox();
+            this.btnOpenFirmwareFolder = new Button();
+            this.txtFirmwareFolder = new TextBox();
+            this.lblFirmwareFolder = new Label();
             this.lblFirmwareStatus = new Label();
             this.btnBrowseLocal = new Button();
             this.btnRefreshFirmware = new Button();
@@ -105,6 +108,9 @@ namespace ESPFlasher
             // groupBoxFirmware
             // 
             this.groupBoxFirmware.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
+            this.groupBoxFirmware.Controls.Add(this.btnOpenFirmwareFolder);
+            this.groupBoxFirmware.Controls.Add(this.txtFirmwareFolder);
+            this.groupBoxFirmware.Controls.Add(this.lblFirmwareFolder);
             this.groupBoxFirmware.Controls.Add(this.lblFirmwareStatus);
             this.groupBoxFirmware.Controls.Add(this.btnBrowseLocal);
             this.groupBoxFirmware.Controls.Add(this.btnRefreshFirmware);
@@ -112,16 +118,46 @@ namespace ESPFlasher
             this.groupBoxFirmware.Controls.Add(this.lblFirmwareVersion);
             this.groupBoxFirmware.Location = new Point(6, 6);
             this.groupBoxFirmware.Name = "groupBoxFirmware";
-            this.groupBoxFirmware.Size = new Size(540, 100);
+            this.groupBoxFirmware.Size = new Size(540, 130);
             this.groupBoxFirmware.TabIndex = 0;
             this.groupBoxFirmware.TabStop = false;
             this.groupBoxFirmware.Text = "Firmware Selection";
+            // 
+            // btnOpenFirmwareFolder
+            // 
+            this.btnOpenFirmwareFolder.Anchor = AnchorStyles.Top | AnchorStyles.Right;
+            this.btnOpenFirmwareFolder.Location = new Point(470, 95);
+            this.btnOpenFirmwareFolder.Name = "btnOpenFirmwareFolder";
+            this.btnOpenFirmwareFolder.Size = new Size(60, 23);
+            this.btnOpenFirmwareFolder.TabIndex = 7;
+            this.btnOpenFirmwareFolder.Text = "📁 Open";
+            this.btnOpenFirmwareFolder.UseVisualStyleBackColor = true;
+            this.btnOpenFirmwareFolder.Click += this.btnOpenFirmwareFolder_Click;
+            // 
+            // txtFirmwareFolder
+            // 
+            this.txtFirmwareFolder.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
+            this.txtFirmwareFolder.Location = new Point(15, 95);
+            this.txtFirmwareFolder.Name = "txtFirmwareFolder";
+            this.txtFirmwareFolder.ReadOnly = true;
+            this.txtFirmwareFolder.Size = new Size(445, 23);
+            this.txtFirmwareFolder.TabIndex = 6;
+            this.txtFirmwareFolder.BackColor = SystemColors.Control;
+            // 
+            // lblFirmwareFolder
+            // 
+            this.lblFirmwareFolder.AutoSize = true;
+            this.lblFirmwareFolder.Location = new Point(15, 75);
+            this.lblFirmwareFolder.Name = "lblFirmwareFolder";
+            this.lblFirmwareFolder.Size = new Size(150, 15);
+            this.lblFirmwareFolder.TabIndex = 5;
+            this.lblFirmwareFolder.Text = "Downloaded Firmware Folder:";
             // 
             // lblFirmwareStatus
             // 
             this.lblFirmwareStatus.AutoSize = true;
             this.lblFirmwareStatus.ForeColor = SystemColors.GrayText;
-            this.lblFirmwareStatus.Location = new Point(15, 70);
+            this.lblFirmwareStatus.Location = new Point(330, 20);
             this.lblFirmwareStatus.Name = "lblFirmwareStatus";
             this.lblFirmwareStatus.Size = new Size(0, 15);
             this.lblFirmwareStatus.TabIndex = 3;
@@ -175,9 +211,9 @@ namespace ESPFlasher
             this.groupBoxDevices.Controls.Add(this.btnRefreshDevices);
             this.groupBoxDevices.Controls.Add(this.listBoxDevices);
             this.groupBoxDevices.Controls.Add(this.lblDevices);
-            this.groupBoxDevices.Location = new Point(6, 112);
+            this.groupBoxDevices.Location = new Point(6, 142);
             this.groupBoxDevices.Name = "groupBoxDevices";
-            this.groupBoxDevices.Size = new Size(540, 190);
+            this.groupBoxDevices.Size = new Size(540, 160);
             this.groupBoxDevices.TabIndex = 1;
             this.groupBoxDevices.TabStop = false;
             this.groupBoxDevices.Text = "ESP Devices";

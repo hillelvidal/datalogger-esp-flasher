@@ -30,6 +30,10 @@ namespace ESPFlasher
         private readonly Dictionary<string, string> _localFirmwareFolders = new();
         private const string SettingsFile = "flasher-settings.json";
         private const int MaxMonitorLines = 1000;
+        
+        private Label lblFirmwareFolder = null!;
+        private TextBox txtFirmwareFolder = null!;
+        private Button btnOpenFirmwareFolder = null!;
 
         public MainForm(ILogger<MainForm> logger)
         {
@@ -37,6 +41,10 @@ namespace ESPFlasher
             InitializeComponent();
             InitializeServices();
             SetupEventHandlers();
+            
+            // Display firmware download folder
+            var firmwareFolder = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "ESPFlasher", "Firmware");
+            txtFirmwareFolder.Text = firmwareFolder;
             
             // Set application icon
             try
@@ -372,7 +380,7 @@ namespace ESPFlasher
                         firmwarePath = await _downloadService.DownloadFirmwareAsync(selectedFirmware);
                         
                         var downloadFolder = Path.GetDirectoryName(firmwarePath);
-                        lblStatus.Text = $"Downloaded to: {downloadFolder}";
+                        lblStatus.Text = $"Downloaded: {selectedFirmware.Version}";
                         
                         // Verify all required files exist
                         var bootloaderPath = Path.Combine(downloadFolder ?? "", "bootloader.bin");
@@ -386,7 +394,9 @@ namespace ESPFlasher
                         if (missingFiles.Count > 0)
                         {
                             MessageBox.Show(
-                                $"Missing required files:\n{string.Join("\n", missingFiles)}\n\nFlashing requires all 3 files:\n- firmware.bin\n- bootloader.bin\n- partitions.bin",
+                                $"Missing required files:\n{string.Join("\n", missingFiles)}\n\n" +
+                                $"Flashing requires all 3 files:\n- firmware.bin\n- bootloader.bin\n- partitions.bin\n\n" +
+                                $"Check your Google Drive folder and ensure all files are present.",
                                 "Missing Files",
                                 MessageBoxButtons.OK,
                                 MessageBoxIcon.Error);
@@ -651,6 +661,30 @@ namespace ESPFlasher
         private void listBoxDevices_SelectedIndexChanged(object sender, EventArgs e)
         {
             UpdateFlashButtonState();
+        }
+
+        private void btnOpenFirmwareFolder_Click(object sender, EventArgs e)
+        {
+            var firmwareFolder = txtFirmwareFolder.Text;
+            
+            if (!Directory.Exists(firmwareFolder))
+            {
+                Directory.CreateDirectory(firmwareFolder);
+            }
+            
+            try
+            {
+                System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+                {
+                    FileName = firmwareFolder,
+                    UseShellExecute = true,
+                    Verb = "open"
+                });
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Failed to open folder:\n{ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
         }
 
         private void OnDownloadProgressChanged(object? sender, DownloadProgressEventArgs e)
