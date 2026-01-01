@@ -894,31 +894,45 @@ namespace ESPFlasher
             {
                 var trimmedLine = line.TrimEnd('\r', '\n');
                 
-                var match = System.Text.RegularExpressions.Regex.Match(trimmedLine, @"^\[([^\]]+)\]\s+([A-Z]+)(:?.*)$");
+                // Check if line is part of ESP boot header (dashes or contains "Datalogger v")
+                bool isBootHeader = trimmedLine.StartsWith("---") || 
+                                   trimmedLine.Contains("Datalogger v") ||
+                                   (trimmedLine.StartsWith("===") && trimmedLine.Length > 10);
                 
-                if (match.Success)
+                if (isBootHeader)
                 {
-                    var prefix = match.Groups[1].Value;
-                    var keyword = match.Groups[2].Value;
-                    var rest = match.Groups[3].Value;
-                    
                     txtMonitorOutput.SelectionStart = txtMonitorOutput.TextLength;
-                    txtMonitorOutput.SelectionColor = Color.Gray;
-                    txtMonitorOutput.AppendText($"[{prefix}] ");
-                    
-                    txtMonitorOutput.SelectionStart = txtMonitorOutput.TextLength;
-                    txtMonitorOutput.SelectionColor = GetColorForKeyword(keyword);
-                    txtMonitorOutput.AppendText(keyword);
-                    
-                    txtMonitorOutput.SelectionStart = txtMonitorOutput.TextLength;
-                    txtMonitorOutput.SelectionColor = Color.LimeGreen;
-                    txtMonitorOutput.AppendText(rest + "\n");
+                    txtMonitorOutput.SelectionColor = Color.Yellow;
+                    txtMonitorOutput.AppendText(trimmedLine + "\n");
                 }
                 else
                 {
-                    txtMonitorOutput.SelectionStart = txtMonitorOutput.TextLength;
-                    txtMonitorOutput.SelectionColor = Color.LightGray;
-                    txtMonitorOutput.AppendText(trimmedLine + "\n");
+                    var match = System.Text.RegularExpressions.Regex.Match(trimmedLine, @"^\[([^\]]+)\]\s+([A-Z]+)(:?.*)$");
+                    
+                    if (match.Success)
+                    {
+                        var prefix = match.Groups[1].Value;
+                        var keyword = match.Groups[2].Value;
+                        var rest = match.Groups[3].Value;
+                        
+                        txtMonitorOutput.SelectionStart = txtMonitorOutput.TextLength;
+                        txtMonitorOutput.SelectionColor = Color.Gray;
+                        txtMonitorOutput.AppendText($"[{prefix}] ");
+                        
+                        txtMonitorOutput.SelectionStart = txtMonitorOutput.TextLength;
+                        txtMonitorOutput.SelectionColor = GetColorForKeyword(keyword);
+                        txtMonitorOutput.AppendText(keyword);
+                        
+                        txtMonitorOutput.SelectionStart = txtMonitorOutput.TextLength;
+                        txtMonitorOutput.SelectionColor = Color.LimeGreen;
+                        txtMonitorOutput.AppendText(rest + "\n");
+                    }
+                    else
+                    {
+                        txtMonitorOutput.SelectionStart = txtMonitorOutput.TextLength;
+                        txtMonitorOutput.SelectionColor = Color.LightGray;
+                        txtMonitorOutput.AppendText(trimmedLine + "\n");
+                    }
                 }
             }
             
