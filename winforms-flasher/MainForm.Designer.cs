@@ -162,7 +162,7 @@ namespace ESPFlasher
             this.lblFirmwareFolder.Name = "lblFirmwareFolder";
             this.lblFirmwareFolder.Size = new Size(150, 15);
             this.lblFirmwareFolder.TabIndex = 5;
-            this.lblFirmwareFolder.Text = "Firmware Folder (all versions):";
+            this.lblFirmwareFolder.Text = "Firmware Folder (log: flasher.log):";
             // 
             // lblFirmwareStatus
             // 

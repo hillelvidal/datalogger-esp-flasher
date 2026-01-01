@@ -740,16 +740,29 @@ namespace ESPFlasher
             
             try
             {
-                System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+                // Open log file if it exists, otherwise open folder
+                var logFile = Path.Combine(firmwareFolder, "flasher.log");
+                if (File.Exists(logFile))
                 {
-                    FileName = firmwareFolder,
-                    UseShellExecute = true,
-                    Verb = "open"
-                });
+                    System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+                    {
+                        FileName = logFile,
+                        UseShellExecute = true
+                    });
+                }
+                else
+                {
+                    System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+                    {
+                        FileName = firmwareFolder,
+                        UseShellExecute = true,
+                        Verb = "open"
+                    });
+                }
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Failed to open folder:\n{ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show($"Failed to open:\n{ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 
