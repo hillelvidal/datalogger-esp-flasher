@@ -40,14 +40,18 @@ namespace ESPFlasher
         public MainForm(ILogger<MainForm> logger)
         {
             _logger = logger;
-            InitializeComponent();
-            InitializeServices();
-            SetupEventHandlers();
             
-            // Initialize firmware folder
+            // Initialize firmware folder BEFORE InitializeServices (which needs it)
             _firmwareFolder = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "ESPFlasher", "Firmware");
             Directory.CreateDirectory(_firmwareFolder);
+            
+            InitializeComponent();
+            
+            // Now set the text box after controls are initialized
             txtFirmwareFolder.Text = _firmwareFolder;
+            
+            InitializeServices();
+            SetupEventHandlers();
             
             // Set application icon
             try
