@@ -888,17 +888,89 @@ namespace ESPFlasher
 
         private void AppendMonitorText(string text)
         {
-            txtMonitorOutput.AppendText(text);
+            var lines = text.Split(new[] { '\n' }, StringSplitOptions.None);
+            
+            foreach (var line in lines)
+            {
+                if (string.IsNullOrEmpty(line))
+                {
+                    txtMonitorOutput.AppendText("\n");
+                    continue;
+                }
+                
+                var match = System.Text.RegularExpressions.Regex.Match(line, @"^\[([^\]]+)\]\s+([A-Z]+)(:?.*)$");
+                
+                if (match.Success)
+                {
+                    var prefix = match.Groups[1].Value;
+                    var keyword = match.Groups[2].Value;
+                    var rest = match.Groups[3].Value;
+                    
+                    txtMonitorOutput.SelectionStart = txtMonitorOutput.TextLength;
+                    txtMonitorOutput.SelectionColor = Color.Gray;
+                    txtMonitorOutput.AppendText($"[{prefix}] ");
+                    
+                    txtMonitorOutput.SelectionStart = txtMonitorOutput.TextLength;
+                    txtMonitorOutput.SelectionColor = GetColorForKeyword(keyword);
+                    txtMonitorOutput.AppendText(keyword);
+                    
+                    txtMonitorOutput.SelectionStart = txtMonitorOutput.TextLength;
+                    txtMonitorOutput.SelectionColor = Color.LimeGreen;
+                    txtMonitorOutput.AppendText(rest);
+                }
+                else
+                {
+                    txtMonitorOutput.SelectionStart = txtMonitorOutput.TextLength;
+                    txtMonitorOutput.SelectionColor = Color.LimeGreen;
+                    txtMonitorOutput.AppendText(line);
+                }
+            }
             
             if (txtMonitorOutput.Lines.Length > MaxMonitorLines)
             {
-                var lines = txtMonitorOutput.Lines;
-                var newLines = lines.Skip(lines.Length - MaxMonitorLines).ToArray();
+                var allLines = txtMonitorOutput.Lines;
+                var newLines = allLines.Skip(allLines.Length - MaxMonitorLines).ToArray();
                 txtMonitorOutput.Lines = newLines;
             }
             
             txtMonitorOutput.SelectionStart = txtMonitorOutput.Text.Length;
             txtMonitorOutput.ScrollToCaret();
+        }
+        
+        private Color GetColorForKeyword(string keyword)
+        {
+            var hash = keyword.GetHashCode();
+            
+            var hue = Math.Abs(hash % 360);
+            var saturation = 0.7;
+            var brightness = 0.9;
+            
+            return ColorFromHSV(hue, saturation, brightness);
+        }
+        
+        private Color ColorFromHSV(double hue, double saturation, double value)
+        {
+            int hi = Convert.ToInt32(Math.Floor(hue / 60)) % 6;
+            double f = hue / 60 - Math.Floor(hue / 60);
+
+            value = value * 255;
+            int v = Convert.ToInt32(value);
+            int p = Convert.ToInt32(value * (1 - saturation));
+            int q = Convert.ToInt32(value * (1 - f * saturation));
+            int t = Convert.ToInt32(value * (1 - (1 - f) * saturation));
+
+            if (hi == 0)
+                return Color.FromArgb(255, v, t, p);
+            else if (hi == 1)
+                return Color.FromArgb(255, q, v, p);
+            else if (hi == 2)
+                return Color.FromArgb(255, p, v, t);
+            else if (hi == 3)
+                return Color.FromArgb(255, p, q, v);
+            else if (hi == 4)
+                return Color.FromArgb(255, t, p, v);
+            else
+                return Color.FromArgb(255, v, p, q);
         }
 
         protected override void OnFormClosing(FormClosingEventArgs e)
