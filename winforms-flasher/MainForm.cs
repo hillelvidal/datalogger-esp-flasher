@@ -888,17 +888,13 @@ namespace ESPFlasher
 
         private void AppendMonitorText(string text)
         {
-            var lines = text.Split(new[] { '\n' }, StringSplitOptions.None);
+            var lines = text.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries);
             
             foreach (var line in lines)
             {
-                if (string.IsNullOrEmpty(line))
-                {
-                    txtMonitorOutput.AppendText("\n");
-                    continue;
-                }
+                var trimmedLine = line.TrimEnd('\r', '\n');
                 
-                var match = System.Text.RegularExpressions.Regex.Match(line, @"^\[([^\]]+)\]\s+([A-Z]+)(:?.*)$");
+                var match = System.Text.RegularExpressions.Regex.Match(trimmedLine, @"^\[([^\]]+)\]\s+([A-Z]+)(:?.*)$");
                 
                 if (match.Success)
                 {
@@ -916,13 +912,13 @@ namespace ESPFlasher
                     
                     txtMonitorOutput.SelectionStart = txtMonitorOutput.TextLength;
                     txtMonitorOutput.SelectionColor = Color.LimeGreen;
-                    txtMonitorOutput.AppendText(rest);
+                    txtMonitorOutput.AppendText(rest + "\n");
                 }
                 else
                 {
                     txtMonitorOutput.SelectionStart = txtMonitorOutput.TextLength;
                     txtMonitorOutput.SelectionColor = Color.LimeGreen;
-                    txtMonitorOutput.AppendText(line);
+                    txtMonitorOutput.AppendText(trimmedLine + "\n");
                 }
             }
             
