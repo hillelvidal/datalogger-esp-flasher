@@ -52,9 +52,13 @@ dotnet build -c Release
 
 1. **Launch ESPFlasher.exe**
 
-2. **Click "Refresh Firmware" button**
+2. **Click the "Refresh" button next to the FIRMWARE dropdown** (top section)
+   - ⚠️ **IMPORTANT:** There are TWO "Refresh" buttons in the app!
+   - Use the **Firmware Refresh** button (top section, next to firmware dropdown)
+   - NOT the Device Refresh button (middle section, next to device list)
    - App scans Google Drive automatically
    - All firmware versions appear in dropdown
+   - Watch the status bar and check console/logs for progress
 
 3. **Select firmware version**
    - Shows download status
@@ -62,7 +66,7 @@ dotnet build -c Release
 
 4. **Connect ESP32 device via USB**
 
-5. **Click "Refresh Devices"**
+5. **Click "Refresh" in the DEVICES section**
    - Detects connected ESP32
 
 6. **Click "Flash Firmware"**

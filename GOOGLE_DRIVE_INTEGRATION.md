@@ -99,9 +99,11 @@ Flash to ESP32
 ### For End Users
 
 1. **Launch the application**
-2. **Click "Refresh Firmware"** button
+2. **Click the "Refresh" button in the FIRMWARE section** (top section, next to firmware dropdown)
+   - **IMPORTANT:** There are TWO "Refresh" buttons - use the one next to the firmware dropdown, NOT the device refresh button
    - App will scan Google Drive for firmware
    - All available versions appear in dropdown
+   - Check the logs/console for detailed scanning progress
 3. **Select desired firmware version**
    - Status shows if already downloaded or will download
 4. **Select ESP device**

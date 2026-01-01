@@ -35,24 +35,32 @@ namespace ESPFlasher.Services
         {
             try
             {
-                _logger.LogInformation($"Scanning Google Drive folder: {_folderId}");
+                _logger.LogInformation($"[GoogleDrive] Scanning folder ID: {_folderId}");
                 var firmwareVersions = new List<FirmwareVersion>();
 
+                _logger.LogInformation("[GoogleDrive] Fetching subfolders...");
                 var subfolders = await GetSubfoldersByScraping(_folderId);
+                _logger.LogInformation($"[GoogleDrive] Found {subfolders.Count} subfolders");
                 
                 foreach (var folder in subfolders)
                 {
                     try
                     {
+                        _logger.LogInformation($"[GoogleDrive] Parsing folder: {folder.Name} (ID: {folder.Id})");
                         var firmware = await ParseFirmwareFolderAsync(folder);
                         if (firmware != null)
                         {
                             firmwareVersions.Add(firmware);
+                            _logger.LogInformation($"[GoogleDrive] ✓ Added firmware: {firmware.Version}");
+                        }
+                        else
+                        {
+                            _logger.LogWarning($"[GoogleDrive] ✗ Folder '{folder.Name}' did not contain valid firmware");
                         }
                     }
                     catch (Exception ex)
                     {
-                        _logger.LogWarning(ex, $"Failed to parse firmware folder: {folder.Name}");
+                        _logger.LogError(ex, $"[GoogleDrive] Failed to parse firmware folder: {folder.Name}");
                     }
                 }
 
@@ -61,12 +69,12 @@ namespace ESPFlasher.Services
                     .ThenByDescending(f => f.Version)
                     .ToList();
 
-                _logger.LogInformation($"Found {firmwareVersions.Count} firmware versions in Google Drive");
+                _logger.LogInformation($"[GoogleDrive] ✓ Scan complete: {firmwareVersions.Count} firmware versions ready");
                 return firmwareVersions;
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Failed to scan Google Drive folder");
+                _logger.LogError(ex, $"[GoogleDrive] ✗ CRITICAL ERROR scanning folder {_folderId}");
                 throw;
             }
         }
@@ -78,8 +86,18 @@ namespace ESPFlasher.Services
             try
             {
                 var url = $"https://drive.google.com/drive/folders/{folderId}";
+                _logger.LogInformation($"[GoogleDrive] Fetching URL: {url}");
                 var response = await _httpClient.GetAsync(url);
+                _logger.LogInformation($"[GoogleDrive] Response status: {response.StatusCode}");
+                
+                if (!response.IsSuccessStatusCode)
+                {
+                    _logger.LogError($"[GoogleDrive] HTTP error: {response.StatusCode} - {response.ReasonPhrase}");
+                    return folders;
+                }
+                
                 var html = await response.Content.ReadAsStringAsync();
+                _logger.LogInformation($"[GoogleDrive] Downloaded HTML: {html.Length} characters");
 
                 // Google Drive embeds JSON data in the page
                 // Look for the data structure containing folder/file information
@@ -112,14 +130,19 @@ namespace ESPFlasher.Services
 
                 if (folders.Count == 0)
                 {
-                    _logger.LogWarning("No subfolders found. The folder might be empty or the scraping pattern needs updating.");
+                    _logger.LogWarning("[GoogleDrive] ⚠ No subfolders found. Possible reasons:");
+                    _logger.LogWarning("  1. Folder is empty");
+                    _logger.LogWarning("  2. Folder is not publicly shared");
+                    _logger.LogWarning("  3. Google Drive HTML structure changed (scraping pattern needs update)");
+                    _logger.LogWarning($"  4. Check folder manually: https://drive.google.com/drive/folders/{folderId}");
                 }
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Failed to scrape Google Drive folder");
+                _logger.LogError(ex, $"[GoogleDrive] ✗ Exception while scraping folder {folderId}");
             }
 
+            _logger.LogInformation($"[GoogleDrive] Returning {folders.Count} folders");
             return folders;
         }
 
@@ -127,15 +150,25 @@ namespace ESPFlasher.Services
         {
             var files = await GetFilesInFolderAsync(folder.Id);
             
+            _logger.LogInformation($"[GoogleDrive] Found {files.Count} files in folder '{folder.Name}'");
+            
             var firmwareFile = files.FirstOrDefault(f => f.Name.Equals("firmware.bin", StringComparison.OrdinalIgnoreCase));
             var bootloaderFile = files.FirstOrDefault(f => f.Name.Equals("bootloader.bin", StringComparison.OrdinalIgnoreCase));
             var partitionsFile = files.FirstOrDefault(f => f.Name.Equals("partitions.bin", StringComparison.OrdinalIgnoreCase));
 
             if (firmwareFile == null)
             {
-                _logger.LogWarning($"No firmware.bin found in folder: {folder.Name}");
+                _logger.LogWarning($"[GoogleDrive] ✗ No firmware.bin found in folder: {folder.Name}");
+                if (files.Count > 0)
+                {
+                    _logger.LogWarning($"[GoogleDrive]   Files found: {string.Join(", ", files.Select(f => f.Name))}");
+                }
                 return null;
             }
+            
+            _logger.LogInformation($"[GoogleDrive] ✓ firmware.bin found (ID: {firmwareFile.Id}, Size: {firmwareFile.Size} bytes)");
+            if (bootloaderFile != null) _logger.LogInformation($"[GoogleDrive] ✓ bootloader.bin found");
+            if (partitionsFile != null) _logger.LogInformation($"[GoogleDrive] ✓ partitions.bin found");
 
             var firmware = new FirmwareVersion
             {
@@ -162,7 +195,7 @@ namespace ESPFlasher.Services
                 firmware.FileSize = firmwareFile.Size;
             }
 
-            _logger.LogInformation($"Parsed firmware: {firmware.Version} with {firmware.Files.Count} files");
+            _logger.LogInformation($"[GoogleDrive] ✓ Created firmware version: {firmware.Version} with {firmware.Files.Count} file(s)");
             return firmware;
         }
 
