@@ -917,7 +917,7 @@ namespace ESPFlasher
                 else
                 {
                     txtMonitorOutput.SelectionStart = txtMonitorOutput.TextLength;
-                    txtMonitorOutput.SelectionColor = Color.LimeGreen;
+                    txtMonitorOutput.SelectionColor = Color.LightGray;
                     txtMonitorOutput.AppendText(trimmedLine + "\n");
                 }
             }
