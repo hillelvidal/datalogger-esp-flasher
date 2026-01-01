@@ -19,6 +19,7 @@ namespace ESPFlasher
         private DeviceDetectionService _deviceService = null!;
         private FirmwareDownloadService _downloadService = null!;
         private EspFlashingService _flashingService = null!;
+        private SerialMonitorService _monitorService = null!;
         
         private List<FirmwareVersion> _firmwareVersions = new();
         private List<EspDevice> _espDevices = new();
@@ -27,6 +28,7 @@ namespace ESPFlasher
         private string? _lastFirmwareFolder;
         private readonly Dictionary<string, string> _localFirmwareFolders = new();
         private const string SettingsFile = "flasher-settings.json";
+        private const int MaxMonitorLines = 1000;
 
         public MainForm(ILogger<MainForm> logger)
         {
@@ -54,6 +56,10 @@ namespace ESPFlasher
             btnRefreshDevices.Enabled = true;
             progressBarFlash.Visible = false;
             lblStatus.Text = "Ready";
+            
+            // Initialize monitor UI
+            cmbBaudRate.SelectedItem = "115200";
+            btnStartStopMonitor.Enabled = false;
         }
 
         private void InitializeServices()
@@ -61,6 +67,7 @@ namespace ESPFlasher
             _deviceService = new DeviceDetectionService(_logger);
             _downloadService = new FirmwareDownloadService(_logger);
             _flashingService = new EspFlashingService(_logger);
+            _monitorService = new SerialMonitorService(_logger);
         }
 
         private void SetupEventHandlers()
@@ -68,6 +75,9 @@ namespace ESPFlasher
             _downloadService.DownloadProgressChanged += OnDownloadProgressChanged;
             _flashingService.FlashProgressChanged += OnFlashProgressChanged;
             _flashingService.FlashStatusChanged += OnFlashStatusChanged;
+            _monitorService.DataReceived += OnMonitorDataReceived;
+            _monitorService.StatusChanged += OnMonitorStatusChanged;
+            tabControl.SelectedIndexChanged += TabControl_SelectedIndexChanged;
         }
 
         private async void MainForm_Load(object sender, EventArgs e)
@@ -767,10 +777,136 @@ namespace ESPFlasher
             }
         }
 
+        private void TabControl_SelectedIndexChanged(object? sender, EventArgs e)
+        {
+            if (tabControl.SelectedTab == tabPageMonitor)
+            {
+                RefreshMonitorPorts();
+            }
+        }
+
+        private void RefreshMonitorPorts()
+        {
+            cmbMonitorPort.Items.Clear();
+            
+            foreach (var device in _espDevices)
+            {
+                cmbMonitorPort.Items.Add(device.PortName);
+            }
+            
+            if (cmbMonitorPort.Items.Count > 0)
+            {
+                cmbMonitorPort.SelectedIndex = 0;
+                btnStartStopMonitor.Enabled = true;
+            }
+            else
+            {
+                btnStartStopMonitor.Enabled = false;
+            }
+        }
+
+        private void btnStartStopMonitor_Click(object? sender, EventArgs e)
+        {
+            if (_monitorService.IsMonitoring)
+            {
+                StopMonitor();
+            }
+            else
+            {
+                StartMonitor();
+            }
+        }
+
+        private void StartMonitor()
+        {
+            if (cmbMonitorPort.SelectedItem == null)
+            {
+                MessageBox.Show("Please select a COM port.", "Port Required", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            if (cmbBaudRate.SelectedItem == null)
+            {
+                MessageBox.Show("Please select a baud rate.", "Baud Rate Required", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            string portName = cmbMonitorPort.SelectedItem.ToString()!;
+            int baudRate = int.Parse(cmbBaudRate.SelectedItem.ToString()!);
+
+            bool success = _monitorService.StartMonitoring(portName, baudRate);
+            
+            if (success)
+            {
+                btnStartStopMonitor.Text = "Stop Monitor";
+                btnStartStopMonitor.BackColor = Color.FromArgb(200, 0, 0);
+                cmbMonitorPort.Enabled = false;
+                cmbBaudRate.Enabled = false;
+                txtMonitorOutput.Clear();
+                AppendMonitorText($"=== Monitor started on {portName} at {baudRate} baud ==="+ Environment.NewLine);
+            }
+        }
+
+        private void StopMonitor()
+        {
+            _monitorService.StopMonitoring();
+            
+            btnStartStopMonitor.Text = "Start Monitor";
+            btnStartStopMonitor.BackColor = Color.FromArgb(0, 150, 0);
+            cmbMonitorPort.Enabled = true;
+            cmbBaudRate.Enabled = true;
+            
+            AppendMonitorText(Environment.NewLine + "=== Monitor stopped ===" + Environment.NewLine);
+        }
+
+        private void btnClearMonitor_Click(object? sender, EventArgs e)
+        {
+            txtMonitorOutput.Clear();
+        }
+
+        private void OnMonitorDataReceived(object? sender, string data)
+        {
+            if (InvokeRequired)
+            {
+                Invoke(() => OnMonitorDataReceived(sender, data));
+                return;
+            }
+
+            AppendMonitorText(data);
+        }
+
+        private void OnMonitorStatusChanged(object? sender, string status)
+        {
+            if (InvokeRequired)
+            {
+                Invoke(() => OnMonitorStatusChanged(sender, status));
+                return;
+            }
+
+            lblStatus.Text = status;
+        }
+
+        private void AppendMonitorText(string text)
+        {
+            txtMonitorOutput.AppendText(text);
+            
+            if (txtMonitorOutput.Lines.Length > MaxMonitorLines)
+            {
+                var lines = txtMonitorOutput.Lines;
+                var newLines = lines.Skip(lines.Length - MaxMonitorLines).ToArray();
+                txtMonitorOutput.Lines = newLines;
+            }
+            
+            txtMonitorOutput.SelectionStart = txtMonitorOutput.Text.Length;
+            txtMonitorOutput.ScrollToCaret();
+        }
+
         protected override void OnFormClosing(FormClosingEventArgs e)
         {
+            _monitorService?.StopMonitoring();
             _flashCancellationTokenSource?.Cancel();
             _downloadService?.Dispose();
+            _monitorService?.Dispose();
             base.OnFormClosing(e);
         }
     }

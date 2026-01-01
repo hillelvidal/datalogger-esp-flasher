@@ -32,6 +32,8 @@ namespace ESPFlasher
         /// </summary>
         private void InitializeComponent()
         {
+            this.tabControl = new TabControl();
+            this.tabPageFlash = new TabPage();
             this.groupBoxFirmware = new GroupBox();
             this.lblFirmwareStatus = new Label();
             this.btnBrowseLocal = new Button();
@@ -45,6 +47,16 @@ namespace ESPFlasher
             this.groupBoxFlash = new GroupBox();
             this.progressBarFlash = new ProgressBar();
             this.btnFlash = new Button();
+            this.tabPageMonitor = new TabPage();
+            this.groupBoxMonitorOutput = new GroupBox();
+            this.txtMonitorOutput = new RichTextBox();
+            this.groupBoxMonitorControl = new GroupBox();
+            this.btnClearMonitor = new Button();
+            this.btnStartStopMonitor = new Button();
+            this.cmbBaudRate = new ComboBox();
+            this.lblBaudRate = new Label();
+            this.cmbMonitorPort = new ComboBox();
+            this.lblMonitorPort = new Label();
             this.statusStrip = new StatusStrip();
             this.lblStatus = new ToolStripStatusLabel();
             this.menuStrip = new MenuStrip();
@@ -54,12 +66,41 @@ namespace ESPFlasher
             this.exitToolStripMenuItem = new ToolStripMenuItem();
             this.helpToolStripMenuItem = new ToolStripMenuItem();
             this.aboutToolStripMenuItem = new ToolStripMenuItem();
+            this.tabControl.SuspendLayout();
+            this.tabPageFlash.SuspendLayout();
             this.groupBoxFirmware.SuspendLayout();
             this.groupBoxDevices.SuspendLayout();
             this.groupBoxFlash.SuspendLayout();
+            this.tabPageMonitor.SuspendLayout();
+            this.groupBoxMonitorOutput.SuspendLayout();
+            this.groupBoxMonitorControl.SuspendLayout();
             this.statusStrip.SuspendLayout();
             this.menuStrip.SuspendLayout();
             this.SuspendLayout();
+            // 
+            // tabControl
+            // 
+            this.tabControl.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
+            this.tabControl.Controls.Add(this.tabPageFlash);
+            this.tabControl.Controls.Add(this.tabPageMonitor);
+            this.tabControl.Location = new Point(12, 27);
+            this.tabControl.Name = "tabControl";
+            this.tabControl.SelectedIndex = 0;
+            this.tabControl.Size = new Size(560, 418);
+            this.tabControl.TabIndex = 0;
+            // 
+            // tabPageFlash
+            // 
+            this.tabPageFlash.Controls.Add(this.groupBoxFirmware);
+            this.tabPageFlash.Controls.Add(this.groupBoxDevices);
+            this.tabPageFlash.Controls.Add(this.groupBoxFlash);
+            this.tabPageFlash.Location = new Point(4, 24);
+            this.tabPageFlash.Name = "tabPageFlash";
+            this.tabPageFlash.Padding = new Padding(3);
+            this.tabPageFlash.Size = new Size(552, 390);
+            this.tabPageFlash.TabIndex = 0;
+            this.tabPageFlash.Text = "Flash";
+            this.tabPageFlash.UseVisualStyleBackColor = true;
             // 
             // groupBoxFirmware
             // 
@@ -69,9 +110,9 @@ namespace ESPFlasher
             this.groupBoxFirmware.Controls.Add(this.btnRefreshFirmware);
             this.groupBoxFirmware.Controls.Add(this.cmbFirmwareVersion);
             this.groupBoxFirmware.Controls.Add(this.lblFirmwareVersion);
-            this.groupBoxFirmware.Location = new Point(12, 35);
+            this.groupBoxFirmware.Location = new Point(6, 6);
             this.groupBoxFirmware.Name = "groupBoxFirmware";
-            this.groupBoxFirmware.Size = new Size(560, 100);
+            this.groupBoxFirmware.Size = new Size(540, 100);
             this.groupBoxFirmware.TabIndex = 0;
             this.groupBoxFirmware.TabStop = false;
             this.groupBoxFirmware.Text = "Firmware Selection";
@@ -134,9 +175,9 @@ namespace ESPFlasher
             this.groupBoxDevices.Controls.Add(this.btnRefreshDevices);
             this.groupBoxDevices.Controls.Add(this.listBoxDevices);
             this.groupBoxDevices.Controls.Add(this.lblDevices);
-            this.groupBoxDevices.Location = new Point(12, 150);
+            this.groupBoxDevices.Location = new Point(6, 112);
             this.groupBoxDevices.Name = "groupBoxDevices";
-            this.groupBoxDevices.Size = new Size(560, 200);
+            this.groupBoxDevices.Size = new Size(540, 190);
             this.groupBoxDevices.TabIndex = 1;
             this.groupBoxDevices.TabStop = false;
             this.groupBoxDevices.Text = "ESP Devices";
@@ -144,7 +185,7 @@ namespace ESPFlasher
             // btnRefreshDevices
             // 
             this.btnRefreshDevices.Anchor = AnchorStyles.Top | AnchorStyles.Right;
-            this.btnRefreshDevices.Location = new Point(470, 20);
+            this.btnRefreshDevices.Location = new Point(450, 20);
             this.btnRefreshDevices.Name = "btnRefreshDevices";
             this.btnRefreshDevices.Size = new Size(75, 25);
             this.btnRefreshDevices.TabIndex = 2;
@@ -160,7 +201,7 @@ namespace ESPFlasher
             this.listBoxDevices.ItemHeight = 15;
             this.listBoxDevices.Location = new Point(15, 50);
             this.listBoxDevices.Name = "listBoxDevices";
-            this.listBoxDevices.Size = new Size(530, 139);
+            this.listBoxDevices.Size = new Size(510, 124);
             this.listBoxDevices.TabIndex = 1;
             this.listBoxDevices.SelectedIndexChanged += this.listBoxDevices_SelectedIndexChanged;
             // 
@@ -178,9 +219,9 @@ namespace ESPFlasher
             this.groupBoxFlash.Anchor = AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
             this.groupBoxFlash.Controls.Add(this.progressBarFlash);
             this.groupBoxFlash.Controls.Add(this.btnFlash);
-            this.groupBoxFlash.Location = new Point(12, 365);
+            this.groupBoxFlash.Location = new Point(6, 308);
             this.groupBoxFlash.Name = "groupBoxFlash";
-            this.groupBoxFlash.Size = new Size(560, 80);
+            this.groupBoxFlash.Size = new Size(540, 76);
             this.groupBoxFlash.TabIndex = 2;
             this.groupBoxFlash.TabStop = false;
             this.groupBoxFlash.Text = "Flash Operation";
@@ -190,7 +231,7 @@ namespace ESPFlasher
             this.progressBarFlash.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
             this.progressBarFlash.Location = new Point(15, 50);
             this.progressBarFlash.Name = "progressBarFlash";
-            this.progressBarFlash.Size = new Size(530, 20);
+            this.progressBarFlash.Size = new Size(510, 20);
             this.progressBarFlash.TabIndex = 1;
             this.progressBarFlash.Visible = false;
             // 
@@ -203,11 +244,127 @@ namespace ESPFlasher
             this.btnFlash.ForeColor = Color.White;
             this.btnFlash.Location = new Point(15, 20);
             this.btnFlash.Name = "btnFlash";
-            this.btnFlash.Size = new Size(530, 30);
+            this.btnFlash.Size = new Size(510, 30);
             this.btnFlash.TabIndex = 0;
             this.btnFlash.Text = "Flash Firmware";
             this.btnFlash.UseVisualStyleBackColor = false;
             this.btnFlash.Click += this.btnFlash_Click;
+            // 
+            // tabPageMonitor
+            // 
+            this.tabPageMonitor.Controls.Add(this.groupBoxMonitorOutput);
+            this.tabPageMonitor.Controls.Add(this.groupBoxMonitorControl);
+            this.tabPageMonitor.Location = new Point(4, 24);
+            this.tabPageMonitor.Name = "tabPageMonitor";
+            this.tabPageMonitor.Padding = new Padding(3);
+            this.tabPageMonitor.Size = new Size(552, 390);
+            this.tabPageMonitor.TabIndex = 1;
+            this.tabPageMonitor.Text = "Monitor";
+            this.tabPageMonitor.UseVisualStyleBackColor = true;
+            // 
+            // groupBoxMonitorOutput
+            // 
+            this.groupBoxMonitorOutput.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
+            this.groupBoxMonitorOutput.Controls.Add(this.txtMonitorOutput);
+            this.groupBoxMonitorOutput.Location = new Point(6, 86);
+            this.groupBoxMonitorOutput.Name = "groupBoxMonitorOutput";
+            this.groupBoxMonitorOutput.Size = new Size(540, 298);
+            this.groupBoxMonitorOutput.TabIndex = 1;
+            this.groupBoxMonitorOutput.TabStop = false;
+            this.groupBoxMonitorOutput.Text = "Serial Output";
+            // 
+            // txtMonitorOutput
+            // 
+            this.txtMonitorOutput.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
+            this.txtMonitorOutput.BackColor = Color.Black;
+            this.txtMonitorOutput.Font = new Font("Consolas", 9F);
+            this.txtMonitorOutput.ForeColor = Color.LimeGreen;
+            this.txtMonitorOutput.Location = new Point(6, 20);
+            this.txtMonitorOutput.Name = "txtMonitorOutput";
+            this.txtMonitorOutput.ReadOnly = true;
+            this.txtMonitorOutput.Size = new Size(528, 272);
+            this.txtMonitorOutput.TabIndex = 0;
+            this.txtMonitorOutput.Text = "";
+            this.txtMonitorOutput.WordWrap = false;
+            // 
+            // groupBoxMonitorControl
+            // 
+            this.groupBoxMonitorControl.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
+            this.groupBoxMonitorControl.Controls.Add(this.btnClearMonitor);
+            this.groupBoxMonitorControl.Controls.Add(this.btnStartStopMonitor);
+            this.groupBoxMonitorControl.Controls.Add(this.cmbBaudRate);
+            this.groupBoxMonitorControl.Controls.Add(this.lblBaudRate);
+            this.groupBoxMonitorControl.Controls.Add(this.cmbMonitorPort);
+            this.groupBoxMonitorControl.Controls.Add(this.lblMonitorPort);
+            this.groupBoxMonitorControl.Location = new Point(6, 6);
+            this.groupBoxMonitorControl.Name = "groupBoxMonitorControl";
+            this.groupBoxMonitorControl.Size = new Size(540, 74);
+            this.groupBoxMonitorControl.TabIndex = 0;
+            this.groupBoxMonitorControl.TabStop = false;
+            this.groupBoxMonitorControl.Text = "Monitor Control";
+            // 
+            // btnClearMonitor
+            // 
+            this.btnClearMonitor.Anchor = AnchorStyles.Top | AnchorStyles.Right;
+            this.btnClearMonitor.Location = new Point(459, 40);
+            this.btnClearMonitor.Name = "btnClearMonitor";
+            this.btnClearMonitor.Size = new Size(75, 25);
+            this.btnClearMonitor.TabIndex = 5;
+            this.btnClearMonitor.Text = "Clear";
+            this.btnClearMonitor.UseVisualStyleBackColor = true;
+            this.btnClearMonitor.Click += this.btnClearMonitor_Click;
+            // 
+            // btnStartStopMonitor
+            // 
+            this.btnStartStopMonitor.Anchor = AnchorStyles.Top | AnchorStyles.Right;
+            this.btnStartStopMonitor.BackColor = Color.FromArgb(0, 150, 0);
+            this.btnStartStopMonitor.FlatStyle = FlatStyle.Flat;
+            this.btnStartStopMonitor.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
+            this.btnStartStopMonitor.ForeColor = Color.White;
+            this.btnStartStopMonitor.Location = new Point(340, 40);
+            this.btnStartStopMonitor.Name = "btnStartStopMonitor";
+            this.btnStartStopMonitor.Size = new Size(113, 25);
+            this.btnStartStopMonitor.TabIndex = 4;
+            this.btnStartStopMonitor.Text = "Start Monitor";
+            this.btnStartStopMonitor.UseVisualStyleBackColor = false;
+            this.btnStartStopMonitor.Click += this.btnStartStopMonitor_Click;
+            // 
+            // cmbBaudRate
+            // 
+            this.cmbBaudRate.DropDownStyle = ComboBoxStyle.DropDownList;
+            this.cmbBaudRate.FormattingEnabled = true;
+            this.cmbBaudRate.Items.AddRange(new object[] { "9600", "19200", "38400", "57600", "115200", "230400", "460800", "921600" });
+            this.cmbBaudRate.Location = new Point(180, 42);
+            this.cmbBaudRate.Name = "cmbBaudRate";
+            this.cmbBaudRate.Size = new Size(120, 23);
+            this.cmbBaudRate.TabIndex = 3;
+            // 
+            // lblBaudRate
+            // 
+            this.lblBaudRate.AutoSize = true;
+            this.lblBaudRate.Location = new Point(180, 24);
+            this.lblBaudRate.Name = "lblBaudRate";
+            this.lblBaudRate.Size = new Size(63, 15);
+            this.lblBaudRate.TabIndex = 2;
+            this.lblBaudRate.Text = "Baud Rate:";
+            // 
+            // cmbMonitorPort
+            // 
+            this.cmbMonitorPort.DropDownStyle = ComboBoxStyle.DropDownList;
+            this.cmbMonitorPort.FormattingEnabled = true;
+            this.cmbMonitorPort.Location = new Point(15, 42);
+            this.cmbMonitorPort.Name = "cmbMonitorPort";
+            this.cmbMonitorPort.Size = new Size(150, 23);
+            this.cmbMonitorPort.TabIndex = 1;
+            // 
+            // lblMonitorPort
+            // 
+            this.lblMonitorPort.AutoSize = true;
+            this.lblMonitorPort.Location = new Point(15, 24);
+            this.lblMonitorPort.Name = "lblMonitorPort";
+            this.lblMonitorPort.Size = new Size(62, 15);
+            this.lblMonitorPort.TabIndex = 0;
+            this.lblMonitorPort.Text = "COM Port";
             // 
             // statusStrip
             // 
@@ -215,7 +372,7 @@ namespace ESPFlasher
             this.statusStrip.Location = new Point(0, 456);
             this.statusStrip.Name = "statusStrip";
             this.statusStrip.Size = new Size(584, 22);
-            this.statusStrip.TabIndex = 3;
+            this.statusStrip.TabIndex = 1;
             this.statusStrip.Text = "statusStrip1";
             // 
             // lblStatus
@@ -230,7 +387,7 @@ namespace ESPFlasher
             this.menuStrip.Location = new Point(0, 0);
             this.menuStrip.Name = "menuStrip";
             this.menuStrip.Size = new Size(584, 24);
-            this.menuStrip.TabIndex = 4;
+            this.menuStrip.TabIndex = 2;
             this.menuStrip.Text = "menuStrip1";
             // 
             // fileToolStripMenuItem
@@ -278,22 +435,26 @@ namespace ESPFlasher
             this.AutoScaleDimensions = new SizeF(7F, 15F);
             this.AutoScaleMode = AutoScaleMode.Font;
             this.ClientSize = new Size(584, 478);
+            this.Controls.Add(this.tabControl);
             this.Controls.Add(this.statusStrip);
             this.Controls.Add(this.menuStrip);
-            this.Controls.Add(this.groupBoxFlash);
-            this.Controls.Add(this.groupBoxDevices);
-            this.Controls.Add(this.groupBoxFirmware);
             this.MainMenuStrip = this.menuStrip;
             this.MinimumSize = new Size(600, 500);
             this.Name = "MainForm";
             this.StartPosition = FormStartPosition.CenterScreen;
             this.Text = "ESP Datalogger Flasher";
             this.Load += this.MainForm_Load;
+            this.tabControl.ResumeLayout(false);
+            this.tabPageFlash.ResumeLayout(false);
             this.groupBoxFirmware.ResumeLayout(false);
             this.groupBoxFirmware.PerformLayout();
             this.groupBoxDevices.ResumeLayout(false);
             this.groupBoxDevices.PerformLayout();
             this.groupBoxFlash.ResumeLayout(false);
+            this.tabPageMonitor.ResumeLayout(false);
+            this.groupBoxMonitorOutput.ResumeLayout(false);
+            this.groupBoxMonitorControl.ResumeLayout(false);
+            this.groupBoxMonitorControl.PerformLayout();
             this.statusStrip.ResumeLayout(false);
             this.statusStrip.PerformLayout();
             this.menuStrip.ResumeLayout(false);
@@ -304,6 +465,8 @@ namespace ESPFlasher
 
         #endregion
 
+        private TabControl tabControl;
+        private TabPage tabPageFlash;
         private GroupBox groupBoxFirmware;
         private Label lblFirmwareVersion;
         private ComboBox cmbFirmwareVersion;
@@ -317,6 +480,16 @@ namespace ESPFlasher
         private GroupBox groupBoxFlash;
         private Button btnFlash;
         private ProgressBar progressBarFlash;
+        private TabPage tabPageMonitor;
+        private GroupBox groupBoxMonitorControl;
+        private Label lblMonitorPort;
+        private ComboBox cmbMonitorPort;
+        private Label lblBaudRate;
+        private ComboBox cmbBaudRate;
+        private Button btnStartStopMonitor;
+        private Button btnClearMonitor;
+        private GroupBox groupBoxMonitorOutput;
+        private RichTextBox txtMonitorOutput;
         private StatusStrip statusStrip;
         private ToolStripStatusLabel lblStatus;
         private MenuStrip menuStrip;
