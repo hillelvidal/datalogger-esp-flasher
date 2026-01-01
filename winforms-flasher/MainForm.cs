@@ -584,6 +584,9 @@ namespace ESPFlasher
                         MessageBoxButtons.OK,
                         MessageBoxIcon.Information);
                 }
+                
+                // Open log file after scan completes
+                OpenLogFile();
             }
             catch (Exception ex)
             {
@@ -594,10 +597,33 @@ namespace ESPFlasher
                     MessageBoxButtons.OK,
                     MessageBoxIcon.Error);
                 lblStatus.Text = "Failed to refresh firmware";
+                
+                // Open log file on error too
+                OpenLogFile();
             }
             finally
             {
                 btnRefreshFirmware.Enabled = true;
+            }
+        }
+
+        private void OpenLogFile()
+        {
+            try
+            {
+                if (!string.IsNullOrEmpty(Program.LogFilePath) && File.Exists(Program.LogFilePath))
+                {
+                    _logger.LogInformation("Opening log file...");
+                    System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+                    {
+                        FileName = Program.LogFilePath,
+                        UseShellExecute = true
+                    });
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to open log file");
             }
         }
 

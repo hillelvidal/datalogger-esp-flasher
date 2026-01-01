@@ -103,13 +103,20 @@ Flash to ESP32
    - **IMPORTANT:** There are TWO "Refresh" buttons - use the one next to the firmware dropdown, NOT the device refresh button
    - App will scan Google Drive for firmware
    - All available versions appear in dropdown
-   - Check the logs/console for detailed scanning progress
+   - **Log file automatically opens** when scan completes showing detailed progress
 3. **Select desired firmware version**
    - Status shows if already downloaded or will download
 4. **Select ESP device**
 5. **Click "Flash Firmware"**
    - Firmware downloads automatically if needed
    - Progress bar shows download/flash progress
+
+### Log Files
+
+- Logs are automatically saved to: `%LocalAppData%\ESPFlasher\Logs\`
+- Each session creates a new log file: `flasher_YYYYMMDD_HHMMSS.log`
+- Log file opens automatically after firmware refresh completes
+- All Google Drive scanning details are logged with `[GoogleDrive]` prefix
 
 ### For Firmware Developers
 

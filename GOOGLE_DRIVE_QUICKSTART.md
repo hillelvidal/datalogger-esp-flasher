@@ -46,6 +46,12 @@ cd winforms-flasher
 dotnet build -c Release
 ```
 
+### Log Files
+
+All activity is logged to: `%LocalAppData%\ESPFlasher\Logs\flasher_YYYYMMDD_HHMMSS.log`
+
+The log file automatically opens after clicking "Refresh Firmware" to show you what happened.
+
 ## For End Users
 
 ### Using the Flasher
@@ -58,7 +64,7 @@ dotnet build -c Release
    - NOT the Device Refresh button (middle section, next to device list)
    - App scans Google Drive automatically
    - All firmware versions appear in dropdown
-   - Watch the status bar and check console/logs for progress
+   - **Log file opens automatically** showing detailed scan progress
 
 3. **Select firmware version**
    - Shows download status
