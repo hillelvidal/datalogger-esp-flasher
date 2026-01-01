@@ -16,6 +16,7 @@ namespace ESPFlasher
     {
         private readonly ILogger<MainForm> _logger;
         private FirestoreService? _firestoreService;
+        private GoogleDriveService? _googleDriveService;
         private DeviceDetectionService _deviceService = null!;
         private FirmwareDownloadService _downloadService = null!;
         private EspFlashingService _flashingService = null!;
@@ -68,6 +69,18 @@ namespace ESPFlasher
             _downloadService = new FirmwareDownloadService(_logger);
             _flashingService = new EspFlashingService(_logger);
             _monitorService = new SerialMonitorService(_logger);
+            
+            // Initialize Google Drive service with your public folder
+            try
+            {
+                var googleDriveFolderUrl = "https://drive.google.com/drive/folders/1cThzyaIsmPvt0CIrETppBEbOmRr1REr-?usp=sharing";
+                _googleDriveService = new GoogleDriveService(googleDriveFolderUrl, _logger);
+                _logger.LogInformation("Google Drive service initialized");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to initialize Google Drive service");
+            }
         }
 
         private void SetupEventHandlers()
@@ -454,28 +467,111 @@ namespace ESPFlasher
 
         private async void btnRefreshFirmware_Click(object sender, EventArgs e)
         {
-            // Initialize Firebase if not already done
-            if (_firestoreService == null)
+            try
             {
-                lblStatus.Text = "Connecting to Firebase...";
-                await InitializeFirestoreAsync();
+                lblStatus.Text = "Loading firmware from cloud sources...";
+                btnRefreshFirmware.Enabled = false;
+                
+                // Remember if we had local firmware selected
+                var hadLocalFirmware = !string.IsNullOrEmpty(_localFirmwarePath);
+                var localFirmwareName = hadLocalFirmware ? cmbFirmwareVersion.Text : null;
+                
+                cmbFirmwareVersion.Items.Clear();
+                _firmwareVersions.Clear();
+                
+                // Add local firmware folders first
+                foreach (var localDisplay in _localFirmwareFolders.Keys)
+                {
+                    cmbFirmwareVersion.Items.Add(localDisplay);
+                }
+                
+                // Try Google Drive first (faster and doesn't require auth)
+                if (_googleDriveService != null)
+                {
+                    try
+                    {
+                        lblStatus.Text = "Scanning Google Drive for firmware...";
+                        var driveFirmware = await _googleDriveService.ScanFirmwareFoldersAsync();
+                        _firmwareVersions.AddRange(driveFirmware);
+                        _logger.LogInformation($"Loaded {driveFirmware.Count} firmware versions from Google Drive");
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogWarning(ex, "Failed to load firmware from Google Drive");
+                    }
+                }
+                
+                // Try Firebase/Firestore (optional)
+                if (_firestoreService == null)
+                {
+                    lblStatus.Text = "Connecting to Firebase...";
+                    await InitializeFirestoreAsync();
+                }
+                
+                if (_firestoreService != null)
+                {
+                    try
+                    {
+                        lblStatus.Text = "Loading firmware from Firestore...";
+                        var firestoreFirmware = await _firestoreService.GetFirmwareVersionsAsync();
+                        _firmwareVersions.AddRange(firestoreFirmware);
+                        _logger.LogInformation($"Loaded {firestoreFirmware.Count} firmware versions from Firestore");
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogWarning(ex, "Failed to load firmware from Firestore");
+                    }
+                }
+                
+                // Add all cloud firmware to dropdown
+                foreach (var version in _firmwareVersions)
+                {
+                    cmbFirmwareVersion.Items.Add(version);
+                }
+                
+                // Restore selection or select latest
+                if (hadLocalFirmware && !string.IsNullOrEmpty(localFirmwareName) && _localFirmwareFolders.ContainsKey(localFirmwareName))
+                {
+                    cmbFirmwareVersion.SelectedItem = localFirmwareName;
+                    lblStatus.Text = $"Loaded {_firmwareVersions.Count} cloud versions (local firmware kept)";
+                }
+                else
+                {
+                    var latestVersion = _firmwareVersions.FirstOrDefault(v => v.IsLatest) ?? _firmwareVersions.FirstOrDefault();
+                    if (latestVersion != null)
+                    {
+                        cmbFirmwareVersion.SelectedItem = latestVersion;
+                    }
+                    lblStatus.Text = $"Loaded {_firmwareVersions.Count} firmware versions from cloud";
+                }
+                
+                if (_firmwareVersions.Count == 0 && _localFirmwareFolders.Count == 0)
+                {
+                    MessageBox.Show(
+                        "No firmware found in cloud sources.\n\n" +
+                        "Sources checked:\n" +
+                        "- Google Drive\n" +
+                        "- Firebase (if configured)\n\n" +
+                        "You can still use local firmware via 'Browse Folder'.",
+                        "No Firmware Found",
+                        MessageBoxButtons.OK,
+                        MessageBoxIcon.Information);
+                }
             }
-            
-            if (_firestoreService == null)
+            catch (Exception ex)
             {
+                _logger.LogError(ex, "Failed to refresh firmware");
                 MessageBox.Show(
-                    "Firebase connection failed. Please check:\n\n" +
-                    "1. Firebase credentials file exists\n" +
-                    "2. Internet connection is active\n\n" +
-                    "You can still use local firmware via 'Browse Folder'.",
-                    "Firebase Connection Failed",
+                    $"Failed to refresh firmware: {ex.Message}",
+                    "Refresh Error",
                     MessageBoxButtons.OK,
-                    MessageBoxIcon.Warning);
-                lblStatus.Text = "Firebase connection failed - using local mode only";
-                return;
+                    MessageBoxIcon.Error);
+                lblStatus.Text = "Failed to refresh firmware";
             }
-            
-            await RefreshFirmwareVersionsAsync();
+            finally
+            {
+                btnRefreshFirmware.Enabled = true;
+            }
         }
 
         private void cmbFirmwareVersion_SelectedIndexChanged(object sender, EventArgs e)

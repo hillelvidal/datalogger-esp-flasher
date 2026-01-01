@@ -88,7 +88,14 @@ namespace ESPFlasher.Services
         
         private async Task DownloadFileAsync(string url, string localPath, long expectedSize)
         {
-            using var response = await _httpClient.GetAsync(url, HttpCompletionOption.ResponseHeadersRead);
+            // Handle Google Drive URLs which may require following redirects
+            var finalUrl = url;
+            if (url.Contains("drive.google.com"))
+            {
+                finalUrl = await GetGoogleDriveDirectDownloadUrlAsync(url);
+            }
+
+            using var response = await _httpClient.GetAsync(finalUrl, HttpCompletionOption.ResponseHeadersRead);
             response.EnsureSuccessStatusCode();
 
             var totalBytes = response.Content.Headers.ContentLength ?? expectedSize;
@@ -110,6 +117,37 @@ namespace ESPFlasher.Services
             }
 
             _logger.LogInformation($"Downloaded: {Path.GetFileName(localPath)} ({downloadedBytes} bytes)");
+        }
+
+        private async Task<string> GetGoogleDriveDirectDownloadUrlAsync(string url)
+        {
+            try
+            {
+                // For small files, Google Drive uses direct download
+                // For large files, it shows a virus scan warning page
+                var response = await _httpClient.GetAsync(url, HttpCompletionOption.ResponseHeadersRead);
+                var content = await response.Content.ReadAsStringAsync();
+
+                // Check if we got a virus scan warning page
+                if (content.Contains("virus-scan-warning") || content.Contains("download-anyway"))
+                {
+                    // Extract the confirm download URL
+                    var match = System.Text.RegularExpressions.Regex.Match(content, @"href=""(/uc\?export=download[^""]+)""");
+                    if (match.Success)
+                    {
+                        var confirmUrl = "https://drive.google.com" + match.Groups[1].Value.Replace("&amp;", "&");
+                        _logger.LogInformation("Following Google Drive confirmation link");
+                        return confirmUrl;
+                    }
+                }
+
+                return url;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to process Google Drive URL, using original");
+                return url;
+            }
         }
 
         public bool IsFirmwareDownloaded(FirmwareVersion firmware)

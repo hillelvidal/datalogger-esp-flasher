@@ -1,0 +1,244 @@
+using Microsoft.Extensions.Logging;
+using ESPFlasher.Models;
+using Newtonsoft.Json.Linq;
+using System.Text.RegularExpressions;
+using System.Net;
+
+namespace ESPFlasher.Services
+{
+    public class GoogleDriveService
+    {
+        private readonly HttpClient _httpClient;
+        private readonly ILogger _logger;
+        private readonly string _folderId;
+
+        public GoogleDriveService(string publicFolderUrl, ILogger logger)
+        {
+            _logger = logger;
+            _httpClient = new HttpClient();
+            _httpClient.DefaultRequestHeaders.Add("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36");
+            _folderId = ExtractFolderIdFromUrl(publicFolderUrl);
+            
+            if (string.IsNullOrEmpty(_folderId))
+            {
+                throw new ArgumentException("Invalid Google Drive folder URL", nameof(publicFolderUrl));
+            }
+        }
+
+        private string ExtractFolderIdFromUrl(string url)
+        {
+            var match = Regex.Match(url, @"folders/([a-zA-Z0-9_-]+)");
+            return match.Success ? match.Groups[1].Value : string.Empty;
+        }
+
+        public async Task<List<FirmwareVersion>> ScanFirmwareFoldersAsync()
+        {
+            try
+            {
+                _logger.LogInformation($"Scanning Google Drive folder: {_folderId}");
+                var firmwareVersions = new List<FirmwareVersion>();
+
+                var subfolders = await GetSubfoldersByScraping(_folderId);
+                
+                foreach (var folder in subfolders)
+                {
+                    try
+                    {
+                        var firmware = await ParseFirmwareFolderAsync(folder);
+                        if (firmware != null)
+                        {
+                            firmwareVersions.Add(firmware);
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogWarning(ex, $"Failed to parse firmware folder: {folder.Name}");
+                    }
+                }
+
+                firmwareVersions = firmwareVersions
+                    .OrderByDescending(f => f.ReleaseDate)
+                    .ThenByDescending(f => f.Version)
+                    .ToList();
+
+                _logger.LogInformation($"Found {firmwareVersions.Count} firmware versions in Google Drive");
+                return firmwareVersions;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to scan Google Drive folder");
+                throw;
+            }
+        }
+
+        private async Task<List<DriveFolder>> GetSubfoldersByScraping(string folderId)
+        {
+            var folders = new List<DriveFolder>();
+            
+            try
+            {
+                var url = $"https://drive.google.com/drive/folders/{folderId}";
+                var response = await _httpClient.GetAsync(url);
+                var html = await response.Content.ReadAsStringAsync();
+
+                // Google Drive embeds JSON data in the page
+                // Look for the data structure containing folder/file information
+                var dataPattern = @"\[""([\w-]+)"",\s*\[""([\w-]+)""\],\s*\[""([^""]*)""\],\s*""([^""]*)"",\s*""([^""]*)"",\s*""([^""]*)"",";
+                var matches = Regex.Matches(html, dataPattern);
+
+                var seenFolders = new HashSet<string>();
+
+                foreach (Match match in matches)
+                {
+                    var itemId = match.Groups[1].Value;
+                    var itemName = WebUtility.HtmlDecode(match.Groups[3].Value);
+                    var mimeType = match.Groups[4].Value;
+
+                    if (mimeType == "application/vnd.google-apps.folder" && !string.IsNullOrEmpty(itemName))
+                    {
+                        if (seenFolders.Add(itemName))
+                        {
+                            folders.Add(new DriveFolder
+                            {
+                                Id = itemId,
+                                Name = itemName,
+                                CreatedTime = DateTime.Now,
+                                ModifiedTime = DateTime.Now
+                            });
+                            _logger.LogInformation($"Found subfolder: {itemName} (ID: {itemId})");
+                        }
+                    }
+                }
+
+                if (folders.Count == 0)
+                {
+                    _logger.LogWarning("No subfolders found. The folder might be empty or the scraping pattern needs updating.");
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to scrape Google Drive folder");
+            }
+
+            return folders;
+        }
+
+        private async Task<FirmwareVersion?> ParseFirmwareFolderAsync(DriveFolder folder)
+        {
+            var files = await GetFilesInFolderAsync(folder.Id);
+            
+            var firmwareFile = files.FirstOrDefault(f => f.Name.Equals("firmware.bin", StringComparison.OrdinalIgnoreCase));
+            var bootloaderFile = files.FirstOrDefault(f => f.Name.Equals("bootloader.bin", StringComparison.OrdinalIgnoreCase));
+            var partitionsFile = files.FirstOrDefault(f => f.Name.Equals("partitions.bin", StringComparison.OrdinalIgnoreCase));
+
+            if (firmwareFile == null)
+            {
+                _logger.LogWarning($"No firmware.bin found in folder: {folder.Name}");
+                return null;
+            }
+
+            var firmware = new FirmwareVersion
+            {
+                Version = folder.Name,
+                Description = $"From Google Drive: {folder.Name}",
+                ReleaseDate = folder.ModifiedTime != DateTime.MinValue ? folder.ModifiedTime : folder.CreatedTime,
+                Files = new Dictionary<string, string>()
+            };
+
+            firmware.Files["firmware"] = GetDirectDownloadUrl(firmwareFile.Id);
+            
+            if (bootloaderFile != null)
+            {
+                firmware.Files["bootloader"] = GetDirectDownloadUrl(bootloaderFile.Id);
+            }
+            
+            if (partitionsFile != null)
+            {
+                firmware.Files["partitions"] = GetDirectDownloadUrl(partitionsFile.Id);
+            }
+
+            if (firmwareFile.Size > 0)
+            {
+                firmware.FileSize = firmwareFile.Size;
+            }
+
+            _logger.LogInformation($"Parsed firmware: {firmware.Version} with {firmware.Files.Count} files");
+            return firmware;
+        }
+
+        private async Task<List<DriveFile>> GetFilesInFolderAsync(string folderId)
+        {
+            if (string.IsNullOrEmpty(folderId))
+            {
+                return new List<DriveFile>();
+            }
+
+            try
+            {
+                var url = $"https://drive.google.com/drive/folders/{folderId}";
+                var response = await _httpClient.GetAsync(url);
+                var html = await response.Content.ReadAsStringAsync();
+
+                var files = new List<DriveFile>();
+                var dataPattern = @"\[""([\w-]+)"",\s*\[""([\w-]+)""\],\s*\[""([^""]*)""\],\s*""([^""]*)"",\s*""([^""]*)"",\s*""([^""]*)"",\s*""([^""]*)"",\s*(\d+)";
+                var matches = Regex.Matches(html, dataPattern);
+
+                var seenFiles = new HashSet<string>();
+
+                foreach (Match match in matches)
+                {
+                    var itemId = match.Groups[1].Value;
+                    var itemName = WebUtility.HtmlDecode(match.Groups[3].Value);
+                    var mimeType = match.Groups[4].Value;
+                    var sizeStr = match.Groups[8].Value;
+
+                    if (!mimeType.Contains("folder") && !string.IsNullOrEmpty(itemName))
+                    {
+                        if (seenFiles.Add(itemName))
+                        {
+                            files.Add(new DriveFile
+                            {
+                                Id = itemId,
+                                Name = itemName,
+                                Size = long.TryParse(sizeStr, out var size) ? size : 0
+                            });
+                            _logger.LogInformation($"Found file: {itemName} (ID: {itemId}, Size: {sizeStr})");
+                        }
+                    }
+                }
+
+                return files;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, $"Failed to get files in folder: {folderId}");
+                return new List<DriveFile>();
+            }
+        }
+
+        private string GetDirectDownloadUrl(string fileId)
+        {
+            return $"https://drive.google.com/uc?export=download&id={fileId}";
+        }
+
+        public void Dispose()
+        {
+            _httpClient?.Dispose();
+        }
+    }
+
+    internal class DriveFolder
+    {
+        public string Id { get; set; } = string.Empty;
+        public string Name { get; set; } = string.Empty;
+        public DateTime CreatedTime { get; set; }
+        public DateTime ModifiedTime { get; set; }
+    }
+
+    internal class DriveFile
+    {
+        public string Id { get; set; } = string.Empty;
+        public string Name { get; set; } = string.Empty;
+        public long Size { get; set; }
+    }
+}
