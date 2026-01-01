@@ -368,8 +368,30 @@ namespace ESPFlasher
                 {
                     try
                     {
-                        lblStatus.Text = "Downloading firmware...";
+                        lblStatus.Text = "Downloading firmware from Google Drive...";
                         firmwarePath = await _downloadService.DownloadFirmwareAsync(selectedFirmware);
+                        
+                        var downloadFolder = Path.GetDirectoryName(firmwarePath);
+                        lblStatus.Text = $"Downloaded to: {downloadFolder}";
+                        
+                        // Verify all required files exist
+                        var bootloaderPath = Path.Combine(downloadFolder ?? "", "bootloader.bin");
+                        var partitionsPath = Path.Combine(downloadFolder ?? "", "partitions.bin");
+                        
+                        var missingFiles = new List<string>();
+                        if (!File.Exists(firmwarePath)) missingFiles.Add("firmware.bin");
+                        if (!File.Exists(bootloaderPath)) missingFiles.Add("bootloader.bin");
+                        if (!File.Exists(partitionsPath)) missingFiles.Add("partitions.bin");
+                        
+                        if (missingFiles.Count > 0)
+                        {
+                            MessageBox.Show(
+                                $"Missing required files:\n{string.Join("\n", missingFiles)}\n\nFlashing requires all 3 files:\n- firmware.bin\n- bootloader.bin\n- partitions.bin",
+                                "Missing Files",
+                                MessageBoxButtons.OK,
+                                MessageBoxIcon.Error);
+                            return;
+                        }
                     }
                     catch (Exception ex)
                     {
