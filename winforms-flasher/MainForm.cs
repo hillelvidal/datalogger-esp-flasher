@@ -74,13 +74,11 @@ namespace ESPFlasher
             try
             {
                 var googleDriveFolderUrl = "https://drive.google.com/drive/folders/1cThzyaIsmPvt0CIrETppBEbOmRr1REr-?usp=sharing";
-                _logger.LogInformation($"Initializing Google Drive service with URL: {googleDriveFolderUrl}");
                 _googleDriveService = new GoogleDriveService(googleDriveFolderUrl, _logger);
-                _logger.LogInformation("✓ Google Drive service initialized successfully");
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "✗ Failed to initialize Google Drive service");
+                _logger.LogError(ex, "Failed to initialize Google Drive service");
                 _googleDriveService = null;
             }
         }
@@ -488,45 +486,24 @@ namespace ESPFlasher
                 }
                 
                 // Try Google Drive first (faster and doesn't require auth)
-                _logger.LogInformation("=== Starting Google Drive firmware scan ===");
-                if (_googleDriveService == null)
-                {
-                    _logger.LogWarning("Google Drive service is NULL - was not initialized properly");
-                }
-                else
+                if (_googleDriveService != null)
                 {
                     try
                     {
                         lblStatus.Text = "Scanning Google Drive for firmware...";
-                        _logger.LogInformation("Calling ScanFirmwareFoldersAsync()...");
                         var driveFirmware = await _googleDriveService.ScanFirmwareFoldersAsync();
-                        _logger.LogInformation($"✓ Google Drive scan complete: Found {driveFirmware.Count} firmware versions");
-                        
-                        if (driveFirmware.Count > 0)
-                        {
-                            foreach (var fw in driveFirmware)
-                            {
-                                _logger.LogInformation($"  - {fw.Version}: {fw.Description}");
-                            }
-                        }
-                        else
-                        {
-                            _logger.LogWarning("No firmware folders found in Google Drive");
-                        }
-                        
                         _firmwareVersions.AddRange(driveFirmware);
                     }
                     catch (Exception ex)
                     {
-                        _logger.LogError(ex, "✗ Failed to load firmware from Google Drive");
+                        _logger.LogError(ex, "Failed to load firmware from Google Drive");
                         MessageBox.Show(
-                            $"Google Drive scan failed:\n{ex.Message}\n\nCheck logs for details.",
+                            $"Google Drive scan failed:\n{ex.Message}",
                             "Google Drive Error",
                             MessageBoxButtons.OK,
                             MessageBoxIcon.Warning);
                     }
                 }
-                _logger.LogInformation("=== Google Drive scan complete ===");
                 
                 // Try Firebase/Firestore (optional)
                 if (_firestoreService == null)
@@ -584,9 +561,6 @@ namespace ESPFlasher
                         MessageBoxButtons.OK,
                         MessageBoxIcon.Information);
                 }
-                
-                // Open log file after scan completes
-                OpenLogFile();
             }
             catch (Exception ex)
             {
@@ -597,33 +571,10 @@ namespace ESPFlasher
                     MessageBoxButtons.OK,
                     MessageBoxIcon.Error);
                 lblStatus.Text = "Failed to refresh firmware";
-                
-                // Open log file on error too
-                OpenLogFile();
             }
             finally
             {
                 btnRefreshFirmware.Enabled = true;
-            }
-        }
-
-        private void OpenLogFile()
-        {
-            try
-            {
-                if (!string.IsNullOrEmpty(Program.LogFilePath) && File.Exists(Program.LogFilePath))
-                {
-                    _logger.LogInformation("Opening log file...");
-                    System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
-                    {
-                        FileName = Program.LogFilePath,
-                        UseShellExecute = true
-                    });
-                }
-            }
-            catch (Exception ex)
-            {
-                _logger.LogWarning(ex, "Failed to open log file");
             }
         }
 

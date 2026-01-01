@@ -33,50 +33,29 @@ namespace ESPFlasher.Services
 
         public async Task<List<FirmwareVersion>> ScanFirmwareFoldersAsync()
         {
-            try
+            var firmwareVersions = new List<FirmwareVersion>();
+            var subfolders = await GetSubfoldersByScraping(_folderId);
+            
+            foreach (var folder in subfolders)
             {
-                _logger.LogInformation($"[GoogleDrive] Scanning folder ID: {_folderId}");
-                var firmwareVersions = new List<FirmwareVersion>();
-
-                _logger.LogInformation("[GoogleDrive] Fetching subfolders...");
-                var subfolders = await GetSubfoldersByScraping(_folderId);
-                _logger.LogInformation($"[GoogleDrive] Found {subfolders.Count} subfolders");
-                
-                foreach (var folder in subfolders)
+                try
                 {
-                    try
+                    var firmware = await ParseFirmwareFolderAsync(folder);
+                    if (firmware != null)
                     {
-                        _logger.LogInformation($"[GoogleDrive] Parsing folder: {folder.Name} (ID: {folder.Id})");
-                        var firmware = await ParseFirmwareFolderAsync(folder);
-                        if (firmware != null)
-                        {
-                            firmwareVersions.Add(firmware);
-                            _logger.LogInformation($"[GoogleDrive] ✓ Added firmware: {firmware.Version}");
-                        }
-                        else
-                        {
-                            _logger.LogWarning($"[GoogleDrive] ✗ Folder '{folder.Name}' did not contain valid firmware");
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        _logger.LogError(ex, $"[GoogleDrive] Failed to parse firmware folder: {folder.Name}");
+                        firmwareVersions.Add(firmware);
                     }
                 }
-
-                firmwareVersions = firmwareVersions
-                    .OrderByDescending(f => f.ReleaseDate)
-                    .ThenByDescending(f => f.Version)
-                    .ToList();
-
-                _logger.LogInformation($"[GoogleDrive] ✓ Scan complete: {firmwareVersions.Count} firmware versions ready");
-                return firmwareVersions;
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, $"Failed to parse firmware folder: {folder.Name}");
+                }
             }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, $"[GoogleDrive] ✗ CRITICAL ERROR scanning folder {_folderId}");
-                throw;
-            }
+
+            return firmwareVersions
+                .OrderByDescending(f => f.ReleaseDate)
+                .ThenByDescending(f => f.Version)
+                .ToList();
         }
 
         private async Task<List<DriveFolder>> GetSubfoldersByScraping(string folderId)
@@ -86,35 +65,38 @@ namespace ESPFlasher.Services
             try
             {
                 var url = $"https://drive.google.com/drive/folders/{folderId}";
-                _logger.LogInformation($"[GoogleDrive] Fetching URL: {url}");
                 var response = await _httpClient.GetAsync(url);
-                _logger.LogInformation($"[GoogleDrive] Response status: {response.StatusCode}");
                 
                 if (!response.IsSuccessStatusCode)
                 {
-                    _logger.LogError($"[GoogleDrive] HTTP error: {response.StatusCode} - {response.ReasonPhrase}");
                     return folders;
                 }
                 
                 var html = await response.Content.ReadAsStringAsync();
-                _logger.LogInformation($"[GoogleDrive] Downloaded HTML: {html.Length} characters");
-
-                // Google Drive embeds JSON data in the page
-                // Look for the data structure containing folder/file information
-                var dataPattern = @"\[""([\w-]+)"",\s*\[""([\w-]+)""\],\s*\[""([^""]*)""\],\s*""([^""]*)"",\s*""([^""]*)"",\s*""([^""]*)"",";
-                var matches = Regex.Matches(html, dataPattern);
-
                 var seenFolders = new HashSet<string>();
-
-                foreach (Match match in matches)
+                
+                // Extract from window['_DRIVE_ivd'] JavaScript variable
+                var driveIvdPattern = @"window\['_DRIVE_ivd'\]\s*=\s*'([^']+)'";
+                var driveIvdMatch = Regex.Match(html, driveIvdPattern);
+                
+                if (driveIvdMatch.Success)
                 {
-                    var itemId = match.Groups[1].Value;
-                    var itemName = WebUtility.HtmlDecode(match.Groups[3].Value);
-                    var mimeType = match.Groups[4].Value;
-
-                    if (mimeType == "application/vnd.google-apps.folder" && !string.IsNullOrEmpty(itemName))
+                    var escapedJson = driveIvdMatch.Groups[1].Value;
+                    
+                    // Decode hex escape sequences (\x5b -> [, \x22 -> ", etc.)
+                    var unescaped = Regex.Replace(escapedJson, @"\\x([0-9a-fA-F]{2})", 
+                        m => ((char)Convert.ToInt32(m.Groups[1].Value, 16)).ToString());
+                    
+                    // Find folder entries: ["ID",["parent"],"name","application/vnd.google-apps.folder"
+                    var folderPattern = @"\[""([\w-]+)"",\[""[^""]*""\],""([^""]*)"",""application\\?/vnd\.google-apps\.folder""";
+                    var folderMatches = Regex.Matches(unescaped, folderPattern);
+                    
+                    foreach (Match match in folderMatches)
                     {
-                        if (seenFolders.Add(itemName))
+                        var itemId = match.Groups[1].Value;
+                        var itemName = match.Groups[2].Value;
+                        
+                        if (!string.IsNullOrEmpty(itemName) && seenFolders.Add(itemName))
                         {
                             folders.Add(new DriveFolder
                             {
@@ -123,26 +105,15 @@ namespace ESPFlasher.Services
                                 CreatedTime = DateTime.Now,
                                 ModifiedTime = DateTime.Now
                             });
-                            _logger.LogInformation($"Found subfolder: {itemName} (ID: {itemId})");
                         }
                     }
-                }
-
-                if (folders.Count == 0)
-                {
-                    _logger.LogWarning("[GoogleDrive] ⚠ No subfolders found. Possible reasons:");
-                    _logger.LogWarning("  1. Folder is empty");
-                    _logger.LogWarning("  2. Folder is not publicly shared");
-                    _logger.LogWarning("  3. Google Drive HTML structure changed (scraping pattern needs update)");
-                    _logger.LogWarning($"  4. Check folder manually: https://drive.google.com/drive/folders/{folderId}");
                 }
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, $"[GoogleDrive] ✗ Exception while scraping folder {folderId}");
+                _logger.LogError(ex, $"Exception while scraping folder {folderId}");
             }
 
-            _logger.LogInformation($"[GoogleDrive] Returning {folders.Count} folders");
             return folders;
         }
 
@@ -150,25 +121,14 @@ namespace ESPFlasher.Services
         {
             var files = await GetFilesInFolderAsync(folder.Id);
             
-            _logger.LogInformation($"[GoogleDrive] Found {files.Count} files in folder '{folder.Name}'");
-            
             var firmwareFile = files.FirstOrDefault(f => f.Name.Equals("firmware.bin", StringComparison.OrdinalIgnoreCase));
             var bootloaderFile = files.FirstOrDefault(f => f.Name.Equals("bootloader.bin", StringComparison.OrdinalIgnoreCase));
             var partitionsFile = files.FirstOrDefault(f => f.Name.Equals("partitions.bin", StringComparison.OrdinalIgnoreCase));
 
             if (firmwareFile == null)
             {
-                _logger.LogWarning($"[GoogleDrive] ✗ No firmware.bin found in folder: {folder.Name}");
-                if (files.Count > 0)
-                {
-                    _logger.LogWarning($"[GoogleDrive]   Files found: {string.Join(", ", files.Select(f => f.Name))}");
-                }
                 return null;
             }
-            
-            _logger.LogInformation($"[GoogleDrive] ✓ firmware.bin found (ID: {firmwareFile.Id}, Size: {firmwareFile.Size} bytes)");
-            if (bootloaderFile != null) _logger.LogInformation($"[GoogleDrive] ✓ bootloader.bin found");
-            if (partitionsFile != null) _logger.LogInformation($"[GoogleDrive] ✓ partitions.bin found");
 
             var firmware = new FirmwareVersion
             {
@@ -195,7 +155,6 @@ namespace ESPFlasher.Services
                 firmware.FileSize = firmwareFile.Size;
             }
 
-            _logger.LogInformation($"[GoogleDrive] ✓ Created firmware version: {firmware.Version} with {firmware.Files.Count} file(s)");
             return firmware;
         }
 
@@ -213,21 +172,29 @@ namespace ESPFlasher.Services
                 var html = await response.Content.ReadAsStringAsync();
 
                 var files = new List<DriveFile>();
-                var dataPattern = @"\[""([\w-]+)"",\s*\[""([\w-]+)""\],\s*\[""([^""]*)""\],\s*""([^""]*)"",\s*""([^""]*)"",\s*""([^""]*)"",\s*""([^""]*)"",\s*(\d+)";
-                var matches = Regex.Matches(html, dataPattern);
-
                 var seenFiles = new HashSet<string>();
-
-                foreach (Match match in matches)
+                
+                // Extract from _DRIVE_ivd variable (same as folder scanning)
+                var driveIvdPattern = @"window\['_DRIVE_ivd'\]\s*=\s*'([^']+)'";
+                var driveIvdMatch = Regex.Match(html, driveIvdPattern);
+                
+                if (driveIvdMatch.Success)
                 {
-                    var itemId = match.Groups[1].Value;
-                    var itemName = WebUtility.HtmlDecode(match.Groups[3].Value);
-                    var mimeType = match.Groups[4].Value;
-                    var sizeStr = match.Groups[8].Value;
+                    var escapedJson = driveIvdMatch.Groups[1].Value;
+                    var unescaped = Regex.Replace(escapedJson, @"\\x([0-9a-fA-F]{2})", 
+                        m => ((char)Convert.ToInt32(m.Groups[1].Value, 16)).ToString());
+                    
+                    // Find file entries (not folders)
+                    var filePattern = @"\[""([\w-]+)"",\[""[^""]*""\],""([^""]*)"",""(?!application\\?/vnd\.google-apps\.folder)([^""]*)"",\d+,null,\d+,\d+,\d+,\d+,(\d+)";
+                    var matches = Regex.Matches(unescaped, filePattern);
 
-                    if (!mimeType.Contains("folder") && !string.IsNullOrEmpty(itemName))
+                    foreach (Match match in matches)
                     {
-                        if (seenFiles.Add(itemName))
+                        var itemId = match.Groups[1].Value;
+                        var itemName = match.Groups[2].Value;
+                        var sizeStr = match.Groups[4].Value;
+
+                        if (!string.IsNullOrEmpty(itemName) && seenFiles.Add(itemName))
                         {
                             files.Add(new DriveFile
                             {
@@ -235,7 +202,6 @@ namespace ESPFlasher.Services
                                 Name = itemName,
                                 Size = long.TryParse(sizeStr, out var size) ? size : 0
                             });
-                            _logger.LogInformation($"Found file: {itemName} (ID: {itemId}, Size: {sizeStr})");
                         }
                     }
                 }
@@ -244,7 +210,7 @@ namespace ESPFlasher.Services
             }
             catch (Exception ex)
             {
-                _logger.LogWarning(ex, $"Failed to get files in folder: {folderId}");
+                _logger.LogError(ex, $"Failed to get files in folder: {folderId}");
                 return new List<DriveFile>();
             }
         }
