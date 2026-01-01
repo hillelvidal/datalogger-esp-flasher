@@ -9,17 +9,23 @@ namespace ESPFlasher.Services
     {
         private readonly HttpClient _httpClient;
         private readonly ILogger _logger;
-        private readonly string _downloadDirectory;
+        private string _downloadDirectory;
 
         public event EventHandler<DownloadProgressEventArgs>? DownloadProgressChanged;
 
-        public FirmwareDownloadService(ILogger logger)
+        public FirmwareDownloadService(ILogger logger, string downloadDirectory)
         {
             _logger = logger;
             _httpClient = new HttpClient();
-            _downloadDirectory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "ESPFlasher", "Firmware");
+            _downloadDirectory = downloadDirectory;
             
             // Ensure download directory exists
+            Directory.CreateDirectory(_downloadDirectory);
+        }
+        
+        public void SetDownloadDirectory(string directory)
+        {
+            _downloadDirectory = directory;
             Directory.CreateDirectory(_downloadDirectory);
         }
 

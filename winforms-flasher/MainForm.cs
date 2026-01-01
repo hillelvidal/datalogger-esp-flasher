@@ -33,7 +33,9 @@ namespace ESPFlasher
         
         private Label lblFirmwareFolder = null!;
         private TextBox txtFirmwareFolder = null!;
+        private Button btnBrowseFirmwareFolder = null!;
         private Button btnOpenFirmwareFolder = null!;
+        private string _firmwareFolder = string.Empty;
 
         public MainForm(ILogger<MainForm> logger)
         {
@@ -42,9 +44,10 @@ namespace ESPFlasher
             InitializeServices();
             SetupEventHandlers();
             
-            // Display firmware download folder
-            var firmwareFolder = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "ESPFlasher", "Firmware");
-            txtFirmwareFolder.Text = firmwareFolder;
+            // Initialize firmware folder
+            _firmwareFolder = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "ESPFlasher", "Firmware");
+            Directory.CreateDirectory(_firmwareFolder);
+            txtFirmwareFolder.Text = _firmwareFolder;
             
             // Set application icon
             try
@@ -74,7 +77,7 @@ namespace ESPFlasher
         private void InitializeServices()
         {
             _deviceService = new DeviceDetectionService(_logger);
-            _downloadService = new FirmwareDownloadService(_logger);
+            _downloadService = new FirmwareDownloadService(_logger, _firmwareFolder);
             _flashingService = new EspFlashingService(_logger);
             _monitorService = new SerialMonitorService(_logger);
             
@@ -510,12 +513,11 @@ namespace ESPFlasher
                 
                 cmbFirmwareVersion.Items.Clear();
                 _firmwareVersions.Clear();
+                _localFirmwareFolders.Clear();
                 
-                // Add local firmware folders first
-                foreach (var localDisplay in _localFirmwareFolders.Keys)
-                {
-                    cmbFirmwareVersion.Items.Add(localDisplay);
-                }
+                // Scan local firmware folder for subfolders
+                lblStatus.Text = "Scanning local firmware folder...";
+                ScanLocalFirmwareFolders();
                 
                 // Try Google Drive first (faster and doesn't require auth)
                 if (_googleDriveService != null)
@@ -661,6 +663,66 @@ namespace ESPFlasher
         private void listBoxDevices_SelectedIndexChanged(object sender, EventArgs e)
         {
             UpdateFlashButtonState();
+        }
+
+        private void ScanLocalFirmwareFolders()
+        {
+            if (!Directory.Exists(_firmwareFolder))
+            {
+                return;
+            }
+
+            try
+            {
+                var subfolders = Directory.GetDirectories(_firmwareFolder);
+                
+                foreach (var subfolder in subfolders)
+                {
+                    var folderName = Path.GetFileName(subfolder);
+                    var firmwarePath = Path.Combine(subfolder, "firmware.bin");
+                    var bootloaderPath = Path.Combine(subfolder, "bootloader.bin");
+                    var partitionsPath = Path.Combine(subfolder, "partitions.bin");
+                    
+                    // Check if this subfolder contains all required files
+                    if (File.Exists(firmwarePath) && File.Exists(bootloaderPath) && File.Exists(partitionsPath))
+                    {
+                        var displayName = $"📁 Local: {folderName}";
+                        _localFirmwareFolders[displayName] = subfolder;
+                        cmbFirmwareVersion.Items.Add(displayName);
+                    }
+                }
+                
+                if (_localFirmwareFolders.Count > 0)
+                {
+                    _logger.LogInformation($"Found {_localFirmwareFolders.Count} local firmware folders");
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to scan local firmware folders");
+            }
+        }
+
+        private void btnBrowseFirmwareFolder_Click(object sender, EventArgs e)
+        {
+            using var dialog = new FolderBrowserDialog
+            {
+                Description = "Select parent folder for all firmware versions (subfolders will be scanned)",
+                SelectedPath = _firmwareFolder,
+                ShowNewFolderButton = true
+            };
+
+            if (dialog.ShowDialog() == DialogResult.OK)
+            {
+                _firmwareFolder = dialog.SelectedPath;
+                txtFirmwareFolder.Text = _firmwareFolder;
+                _downloadService.SetDownloadDirectory(_firmwareFolder);
+                
+                lblStatus.Text = $"Firmware folder changed to: {Path.GetFileName(_firmwareFolder)}";
+                
+                // Auto-refresh to scan new folder
+                btnRefreshFirmware_Click(sender, e);
+            }
         }
 
         private void btnOpenFirmwareFolder_Click(object sender, EventArgs e)

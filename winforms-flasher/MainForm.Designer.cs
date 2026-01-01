@@ -35,11 +35,11 @@ namespace ESPFlasher
             this.tabControl = new TabControl();
             this.tabPageFlash = new TabPage();
             this.groupBoxFirmware = new GroupBox();
+            this.btnBrowseFirmwareFolder = new Button();
             this.btnOpenFirmwareFolder = new Button();
             this.txtFirmwareFolder = new TextBox();
             this.lblFirmwareFolder = new Label();
             this.lblFirmwareStatus = new Label();
-            this.btnBrowseLocal = new Button();
             this.btnRefreshFirmware = new Button();
             this.cmbFirmwareVersion = new ComboBox();
             this.lblFirmwareVersion = new Label();
@@ -108,11 +108,11 @@ namespace ESPFlasher
             // groupBoxFirmware
             // 
             this.groupBoxFirmware.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
+            this.groupBoxFirmware.Controls.Add(this.btnBrowseFirmwareFolder);
             this.groupBoxFirmware.Controls.Add(this.btnOpenFirmwareFolder);
             this.groupBoxFirmware.Controls.Add(this.txtFirmwareFolder);
             this.groupBoxFirmware.Controls.Add(this.lblFirmwareFolder);
             this.groupBoxFirmware.Controls.Add(this.lblFirmwareStatus);
-            this.groupBoxFirmware.Controls.Add(this.btnBrowseLocal);
             this.groupBoxFirmware.Controls.Add(this.btnRefreshFirmware);
             this.groupBoxFirmware.Controls.Add(this.cmbFirmwareVersion);
             this.groupBoxFirmware.Controls.Add(this.lblFirmwareVersion);
@@ -122,6 +122,17 @@ namespace ESPFlasher
             this.groupBoxFirmware.TabIndex = 0;
             this.groupBoxFirmware.TabStop = false;
             this.groupBoxFirmware.Text = "Firmware Selection";
+            // 
+            // btnBrowseFirmwareFolder
+            // 
+            this.btnBrowseFirmwareFolder.Anchor = AnchorStyles.Top | AnchorStyles.Right;
+            this.btnBrowseFirmwareFolder.Location = new Point(390, 95);
+            this.btnBrowseFirmwareFolder.Name = "btnBrowseFirmwareFolder";
+            this.btnBrowseFirmwareFolder.Size = new Size(70, 23);
+            this.btnBrowseFirmwareFolder.TabIndex = 8;
+            this.btnBrowseFirmwareFolder.Text = "Change...";
+            this.btnBrowseFirmwareFolder.UseVisualStyleBackColor = true;
+            this.btnBrowseFirmwareFolder.Click += this.btnBrowseFirmwareFolder_Click;
             // 
             // btnOpenFirmwareFolder
             // 
@@ -140,7 +151,7 @@ namespace ESPFlasher
             this.txtFirmwareFolder.Location = new Point(15, 95);
             this.txtFirmwareFolder.Name = "txtFirmwareFolder";
             this.txtFirmwareFolder.ReadOnly = true;
-            this.txtFirmwareFolder.Size = new Size(445, 23);
+            this.txtFirmwareFolder.Size = new Size(365, 23);
             this.txtFirmwareFolder.TabIndex = 6;
             this.txtFirmwareFolder.BackColor = SystemColors.Control;
             // 
@@ -151,7 +162,7 @@ namespace ESPFlasher
             this.lblFirmwareFolder.Name = "lblFirmwareFolder";
             this.lblFirmwareFolder.Size = new Size(150, 15);
             this.lblFirmwareFolder.TabIndex = 5;
-            this.lblFirmwareFolder.Text = "Downloaded Firmware Folder:";
+            this.lblFirmwareFolder.Text = "Firmware Folder (all versions):";
             // 
             // lblFirmwareStatus
             // 
@@ -161,17 +172,6 @@ namespace ESPFlasher
             this.lblFirmwareStatus.Name = "lblFirmwareStatus";
             this.lblFirmwareStatus.Size = new Size(0, 15);
             this.lblFirmwareStatus.TabIndex = 3;
-            // 
-            // btnBrowseLocal
-            // 
-            this.btnBrowseLocal.Anchor = AnchorStyles.Top | AnchorStyles.Right;
-            this.btnBrowseLocal.Location = new Point(340, 40);
-            this.btnBrowseLocal.Name = "btnBrowseLocal";
-            this.btnBrowseLocal.Size = new Size(120, 25);
-            this.btnBrowseLocal.TabIndex = 4;
-            this.btnBrowseLocal.Text = "📁 Browse Folder...";
-            this.btnBrowseLocal.UseVisualStyleBackColor = true;
-            this.btnBrowseLocal.Click += this.btnBrowseLocal_Click;
             // 
             // btnRefreshFirmware
             // 
