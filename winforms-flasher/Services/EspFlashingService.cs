@@ -198,6 +198,44 @@ namespace ESPFlasher.Services
                 catch { }
                 throw new FileNotFoundException(errorMsg);
             }
+            
+            // Test if esptool.exe can run at all
+            try
+            {
+                var testProcess = new Process
+                {
+                    StartInfo = new ProcessStartInfo
+                    {
+                        FileName = _esptoolPath,
+                        Arguments = "--help",
+                        UseShellExecute = false,
+                        RedirectStandardOutput = true,
+                        RedirectStandardError = true,
+                        CreateNoWindow = true
+                    }
+                };
+                testProcess.Start();
+                var testOutput = testProcess.StandardOutput.ReadToEnd();
+                var testError = testProcess.StandardError.ReadToEnd();
+                testProcess.WaitForExit();
+                
+                File.AppendAllText(debugFile, $"Test run (--help):\n");
+                File.AppendAllText(debugFile, $"Exit code: {testProcess.ExitCode}\n");
+                File.AppendAllText(debugFile, $"Output: {testOutput}\n");
+                File.AppendAllText(debugFile, $"Error: {testError}\n\n");
+                
+                if (testProcess.ExitCode != 0 && string.IsNullOrWhiteSpace(testOutput) && string.IsNullOrWhiteSpace(testError))
+                {
+                    throw new InvalidOperationException($"esptool.exe fails to run (exit code {testProcess.ExitCode}) with no output. This may indicate:\n" +
+                        "1. Missing Visual C++ Runtime - Install from Microsoft\n" +
+                        "2. Antivirus blocking execution\n" +
+                        "3. Corrupted esptool.exe file");
+                }
+            }
+            catch (Exception ex)
+            {
+                File.AppendAllText(debugFile, $"Test run failed: {ex.Message}\n\n");
+            }
 
             var startInfo = new ProcessStartInfo
             {
