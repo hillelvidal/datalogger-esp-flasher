@@ -233,12 +233,34 @@ namespace ESPFlasher.Services
                 throw;
             }
 
-            var fullOutput = output.ToString() + error.ToString();
+            var stdOut = output.ToString();
+            var stdErr = error.ToString();
+            var fullOutput = stdOut + stdErr;
             
             if (process.ExitCode != 0)
             {
-                _logger.LogError($"esptool failed with exit code {process.ExitCode}: {fullOutput}");
-                throw new InvalidOperationException($"esptool operation failed: {fullOutput}");
+                _logger.LogError($"esptool failed with exit code {process.ExitCode}");
+                _logger.LogError($"STDOUT: {stdOut}");
+                _logger.LogError($"STDERR: {stdErr}");
+                
+                var errorMsg = $"esptool.exe failed (exit code {process.ExitCode})\n\n";
+                
+                if (!string.IsNullOrWhiteSpace(stdErr))
+                {
+                    errorMsg += $"Error Output:\n{stdErr}\n\n";
+                }
+                
+                if (!string.IsNullOrWhiteSpace(stdOut))
+                {
+                    errorMsg += $"Standard Output:\n{stdOut}";
+                }
+                
+                if (string.IsNullOrWhiteSpace(stdErr) && string.IsNullOrWhiteSpace(stdOut))
+                {
+                    errorMsg += "No output captured from esptool.exe";
+                }
+                
+                throw new InvalidOperationException(errorMsg);
             }
 
             return fullOutput;
