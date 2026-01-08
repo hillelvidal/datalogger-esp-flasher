@@ -114,15 +114,20 @@ namespace ESPFlasher.Services
 
         private async Task<bool> WriteFirmwareAsync(string firmwarePath, string portName, CancellationToken cancellationToken)
         {
-            // Check if we have bootloader and partitions files in the same directory
+            // Look for bootloader and partitions in _common folder (parent of firmware folder)
             var firmwareDir = Path.GetDirectoryName(firmwarePath);
-            var bootloaderPath = Path.Combine(firmwareDir ?? "", "bootloader.bin");
-            var partitionsPath = Path.Combine(firmwareDir ?? "", "partitions.bin");
+            var parentDir = Path.GetDirectoryName(firmwareDir);
+            var commonDir = Path.Combine(parentDir ?? "", "_common");
+            
+            var bootloaderPath = Path.Combine(commonDir, "bootloader.bin");
+            var partitionsPath = Path.Combine(commonDir, "partitions.bin");
             
             bool hasBootloader = File.Exists(bootloaderPath);
             bool hasPartitions = File.Exists(partitionsPath);
             
-            _logger.LogInformation($"Bootloader found: {hasBootloader}, Partitions found: {hasPartitions}");
+            _logger.LogInformation($"Looking in: {commonDir}");
+            _logger.LogInformation($"Bootloader found: {hasBootloader} at {bootloaderPath}");
+            _logger.LogInformation($"Partitions found: {hasPartitions} at {partitionsPath}");
             
             // Build the flash command with all available files
             var args = $"--port {portName} --chip esp32s3 --baud 460800 --before default-reset --after hard-reset write-flash --flash-mode dio --flash-freq 80m --flash-size detect";
