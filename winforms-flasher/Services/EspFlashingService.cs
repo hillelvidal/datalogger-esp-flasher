@@ -248,8 +248,7 @@ namespace ESPFlasher.Services
             var stdErr = error.ToString();
             var fullOutput = stdOut + stdErr;
             
-            // Write output to debug file
-            var debugFile = Path.Combine(Path.GetTempPath(), "esptool_debug.txt");
+            // Write output to debug file (reuse debugFile from above)
             try
             {
                 File.AppendAllText(debugFile, $"Exit Code: {process.ExitCode}\n");
