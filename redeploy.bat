@@ -60,7 +60,7 @@ if %errorlevel% neq 0 (
 )
 
 echo.
-echo [4/4] Building application (Release)...
+echo [4/5] Building application (Release)...
 dotnet build --configuration Release --no-restore
 if %errorlevel% neq 0 (
     echo.
@@ -78,6 +78,35 @@ if %errorlevel% neq 0 (
     pause
     exit /b 1
 )
+
+echo.
+echo [5/5] Setting up shared ESP32 files...
+cd ..
+
+REM Get firmware folder from app settings or use default
+set "FIRMWARE_DIR=%LOCALAPPDATA%\ESPFlasher\Firmware"
+if not exist "%FIRMWARE_DIR%" mkdir "%FIRMWARE_DIR%"
+if not exist "%FIRMWARE_DIR%\_common" mkdir "%FIRMWARE_DIR%\_common"
+
+REM Only copy if files don't already exist
+if exist "src\_common\bootloader.bin" (
+    if not exist "%FIRMWARE_DIR%\_common\bootloader.bin" (
+        copy "src\_common\bootloader.bin" "%FIRMWARE_DIR%\_common\bootloader.bin" >nul 2>&1
+        echo Copied bootloader.bin to %FIRMWARE_DIR%\_common\
+    ) else (
+        echo bootloader.bin already exists, skipping
+    )
+)
+if exist "src\_common\partitions.bin" (
+    if not exist "%FIRMWARE_DIR%\_common\partitions.bin" (
+        copy "src\_common\partitions.bin" "%FIRMWARE_DIR%\_common\partitions.bin" >nul 2>&1
+        echo Copied partitions.bin to %FIRMWARE_DIR%\_common\
+    ) else (
+        echo partitions.bin already exists, skipping
+    )
+)
+
+cd winforms-flasher
 
 echo.
 echo Copying additional files...
@@ -99,5 +128,7 @@ echo SUCCESS! Redeploy completed
 echo ========================================
 echo.
 echo Executable: %cd%\publish\ESPFlasher.exe
+echo Firmware folder: %FIRMWARE_DIR%
+echo Shared files: %FIRMWARE_DIR%\_common\
 echo.
 pause

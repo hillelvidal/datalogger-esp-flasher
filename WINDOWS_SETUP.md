@@ -47,7 +47,8 @@ The `redeploy.bat` script does **everything automatically**:
 - Restores NuGet packages
 - Builds the project
 - Creates the executable
-- No manual dependency installation needed!
+- **Sets up shared bootloader/partitions files** in `Documents\ESP-Firmwares\_common\`
+- No manual dependency installation or file copying needed!
 
 ```cmd
 redeploy.bat
@@ -58,6 +59,7 @@ redeploy.bat
 2. Restores all NuGet dependencies (Newtonsoft.Json, Google.Cloud.Firestore, etc.)
 3. Builds the WinForms app in Release mode
 4. Creates `winforms-flasher.exe` in `winforms-flasher\bin\Release\net8.0-windows\`
+5. Copies shared `bootloader.bin` and `partitions.bin` to `%USERPROFILE%\Documents\ESP-Firmwares\_common\`
 
 ### 4. Run the Application
 
@@ -140,26 +142,28 @@ C:\datalogger-esp-flasher\
 
 ## Default Firmware Storage Location
 
-The app will prompt you to set a firmware folder on first run.
-
-**Recommended location:**
+**Automatically created by `redeploy.bat`:**
 ```
-C:\ESP-Firmwares\
+%USERPROFILE%\Documents\ESP-Firmwares\
 ```
 
-**Structure:**
+Typically: `C:\Users\YourName\Documents\ESP-Firmwares\`
+
+**Structure after first run:**
 ```
-C:\ESP-Firmwares\
+Documents\ESP-Firmwares\
 ├── _common\
-│   ├── bootloader.bin
-│   └── partitions.bin
-├── firmware-20260108.4\
+│   ├── bootloader.bin      ← Auto-copied by redeploy.bat
+│   └── partitions.bin      ← Auto-copied by redeploy.bat
+├── firmware-20260108.4\    ← Downloaded from cloud
 │   ├── scanin-datalogger-20260108.4.bin
 │   └── build-info.txt
-└── firmware-20260108.5\
+└── firmware-20260108.5\    ← Downloaded from cloud
     ├── scanin-datalogger-20260108.5.bin
     └── build-info.txt
 ```
+
+The app will use this location by default. You can change it in the app settings if needed.
 
 ---
 
