@@ -177,9 +177,27 @@ namespace ESPFlasher.Services
             try
             {
                 File.AppendAllText(debugFile, $"\n\n=== {DateTime.Now:yyyy-MM-dd HH:mm:ss} ===\n");
+                File.AppendAllText(debugFile, $"esptool.exe path: {_esptoolPath}\n");
+                File.AppendAllText(debugFile, $"esptool.exe exists: {File.Exists(_esptoolPath)}\n");
+                File.AppendAllText(debugFile, $"Working directory: {AppDomain.CurrentDomain.BaseDirectory}\n");
                 File.AppendAllText(debugFile, $"Command: {_esptoolPath} {args}\n\n");
             }
             catch { }
+            
+            // Verify esptool.exe exists
+            if (!File.Exists(_esptoolPath))
+            {
+                var errorMsg = $"esptool.exe not found at: {_esptoolPath}\n\n";
+                errorMsg += $"Working directory: {AppDomain.CurrentDomain.BaseDirectory}\n";
+                errorMsg += $"Files in directory:\n";
+                try
+                {
+                    var files = Directory.GetFiles(AppDomain.CurrentDomain.BaseDirectory, "*.exe");
+                    errorMsg += string.Join("\n", files.Select(f => $"  - {Path.GetFileName(f)}"));
+                }
+                catch { }
+                throw new FileNotFoundException(errorMsg);
+            }
 
             var startInfo = new ProcessStartInfo
             {
