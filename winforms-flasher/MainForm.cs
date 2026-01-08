@@ -255,8 +255,18 @@ namespace ESPFlasher
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Flash operation failed");
+                
+                // Show detailed error with full exception message
+                var errorDetails = ex.Message;
+                if (ex.InnerException != null)
+                {
+                    errorDetails += $"\n\nDetails:\n{ex.InnerException.Message}";
+                }
+                
                 MessageBox.Show(
-                    $"Flash operation failed: {ex.Message}",
+                    $"Flash operation failed:\n\n{errorDetails}\n\n" +
+                    $"Firmware: {_selectedFirmware?.LocalPath}\n" +
+                    $"Device: {selectedDevice.PortName}",
                     "Flash Error",
                     MessageBoxButtons.OK,
                     MessageBoxIcon.Error);
