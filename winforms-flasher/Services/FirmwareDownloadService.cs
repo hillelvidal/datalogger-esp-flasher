@@ -31,49 +31,24 @@ namespace ESPFlasher.Services
 
         public async Task<string> DownloadFirmwareAsync(FirmwareVersion firmware)
         {
-            // Create version-specific folder
             var versionFolder = Path.Combine(_downloadDirectory, firmware.LocalFolderName);
             Directory.CreateDirectory(versionFolder);
             
             var firmwarePath = Path.Combine(versionFolder, "firmware.bin");
             
-            // Check if already downloaded
             if (IsFirmwareDownloaded(firmware))
             {
                 _logger.LogInformation($"Firmware {firmware.Version} already downloaded");
                 return firmwarePath;
             }
 
-            _logger.LogInformation($"Downloading firmware {firmware.Version} (all files)");
+            _logger.LogInformation($"Downloading firmware {firmware.Version}");
 
             try
             {
-                // Download firmware.bin (required)
                 await DownloadFileAsync(firmware.FirmwareUrl, firmwarePath, firmware.FileSize);
                 
-                // Download bootloader.bin (if available)
-                if (!string.IsNullOrEmpty(firmware.BootloaderUrl))
-                {
-                    var bootloaderPath = Path.Combine(versionFolder, "bootloader.bin");
-                    await DownloadFileAsync(firmware.BootloaderUrl, bootloaderPath, 0);
-                    _logger.LogInformation("Bootloader downloaded");
-                }
-                else
-                {
-                    _logger.LogWarning("No bootloader URL provided");
-                }
-                
-                // Download partitions.bin (if available)
-                if (!string.IsNullOrEmpty(firmware.PartitionsUrl))
-                {
-                    var partitionsPath = Path.Combine(versionFolder, "partitions.bin");
-                    await DownloadFileAsync(firmware.PartitionsUrl, partitionsPath, 0);
-                    _logger.LogInformation("Partitions downloaded");
-                }
-                else
-                {
-                    _logger.LogWarning("No partitions URL provided");
-                }
+                await EnsureSharedFilesDownloadedAsync(firmware);
 
                 _logger.LogInformation($"Firmware {firmware.Version} downloaded successfully to {versionFolder}");
                 return firmwarePath;
@@ -82,13 +57,33 @@ namespace ESPFlasher.Services
             {
                 _logger.LogError(ex, $"Failed to download firmware {firmware.Version}");
                 
-                // Clean up partial download
                 if (Directory.Exists(versionFolder))
                 {
                     Directory.Delete(versionFolder, true);
                 }
                 
                 throw;
+            }
+        }
+        
+        private async Task EnsureSharedFilesDownloadedAsync(FirmwareVersion firmware)
+        {
+            var commonFolder = Path.Combine(_downloadDirectory, "_common");
+            Directory.CreateDirectory(commonFolder);
+            
+            var bootloaderPath = Path.Combine(commonFolder, "bootloader.bin");
+            var partitionsPath = Path.Combine(commonFolder, "partitions.bin");
+            
+            if (!File.Exists(bootloaderPath) && !string.IsNullOrEmpty(firmware.BootloaderUrl))
+            {
+                _logger.LogInformation("Downloading shared bootloader.bin");
+                await DownloadFileAsync(firmware.BootloaderUrl, bootloaderPath, 0);
+            }
+            
+            if (!File.Exists(partitionsPath) && !string.IsNullOrEmpty(firmware.PartitionsUrl))
+            {
+                _logger.LogInformation("Downloading shared partitions.bin");
+                await DownloadFileAsync(firmware.PartitionsUrl, partitionsPath, 0);
             }
         }
         

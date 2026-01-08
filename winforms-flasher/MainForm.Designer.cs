@@ -94,137 +94,237 @@ namespace ESPFlasher
             // 
             // tabPageFlash
             // 
-            this.tabPageFlash.Controls.Add(this.groupBoxFirmware);
-            this.tabPageFlash.Controls.Add(this.groupBoxDevices);
-            this.tabPageFlash.Controls.Add(this.groupBoxFlash);
+            this.tabPageFlash.Controls.Add(this.splitContainerFlash);
             this.tabPageFlash.Location = new Point(4, 24);
             this.tabPageFlash.Name = "tabPageFlash";
             this.tabPageFlash.Padding = new Padding(3);
             this.tabPageFlash.Size = new Size(552, 390);
             this.tabPageFlash.TabIndex = 0;
-            this.tabPageFlash.Text = "Flash";
+            this.tabPageFlash.Text = "Flash Firmware";
             this.tabPageFlash.UseVisualStyleBackColor = true;
             // 
-            // groupBoxFirmware
+            // splitContainerFlash
             // 
-            this.groupBoxFirmware.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
-            this.groupBoxFirmware.Controls.Add(this.btnBrowseFirmwareFolder);
-            this.groupBoxFirmware.Controls.Add(this.btnOpenFirmwareFolder);
-            this.groupBoxFirmware.Controls.Add(this.txtFirmwareFolder);
-            this.groupBoxFirmware.Controls.Add(this.lblFirmwareFolder);
-            this.groupBoxFirmware.Controls.Add(this.lblFirmwareStatus);
-            this.groupBoxFirmware.Controls.Add(this.btnRefreshFirmware);
-            this.groupBoxFirmware.Controls.Add(this.cmbFirmwareVersion);
-            this.groupBoxFirmware.Controls.Add(this.lblFirmwareVersion);
-            this.groupBoxFirmware.Location = new Point(6, 6);
-            this.groupBoxFirmware.Name = "groupBoxFirmware";
-            this.groupBoxFirmware.Size = new Size(540, 130);
-            this.groupBoxFirmware.TabIndex = 0;
-            this.groupBoxFirmware.TabStop = false;
-            this.groupBoxFirmware.Text = "Firmware Selection";
+            this.splitContainerFlash.Dock = DockStyle.Fill;
+            this.splitContainerFlash.Location = new Point(3, 3);
+            this.splitContainerFlash.Name = "splitContainerFlash";
+            this.splitContainerFlash.Panel1.Controls.Add(this.groupBoxFirmwareLibrary);
+            this.splitContainerFlash.Panel2.Controls.Add(this.groupBoxFlashOperation);
+            this.splitContainerFlash.Size = new Size(546, 384);
+            this.splitContainerFlash.SplitterDistance = 240;
+            this.splitContainerFlash.TabIndex = 0;
+            // 
+            // groupBoxFirmwareLibrary
+            // 
+            this.groupBoxFirmwareLibrary.Dock = DockStyle.Fill;
+            this.groupBoxFirmwareLibrary.Controls.Add(this.listViewFirmwares);
+            this.groupBoxFirmwareLibrary.Controls.Add(this.panelFirmwareActions);
+            this.groupBoxFirmwareLibrary.Controls.Add(this.panelFirmwareFolder);
+            this.groupBoxFirmwareLibrary.Location = new Point(0, 0);
+            this.groupBoxFirmwareLibrary.Name = "groupBoxFirmwareLibrary";
+            this.groupBoxFirmwareLibrary.Padding = new Padding(8);
+            this.groupBoxFirmwareLibrary.Size = new Size(240, 384);
+            this.groupBoxFirmwareLibrary.TabIndex = 0;
+            this.groupBoxFirmwareLibrary.TabStop = false;
+            this.groupBoxFirmwareLibrary.Text = "Firmware Library";
+            // 
+            // listViewFirmwares
+            // 
+            this.listViewFirmwares.Dock = DockStyle.Fill;
+            this.listViewFirmwares.FullRowSelect = true;
+            this.listViewFirmwares.HideSelection = false;
+            this.listViewFirmwares.Location = new Point(8, 64);
+            this.listViewFirmwares.MultiSelect = false;
+            this.listViewFirmwares.Name = "listViewFirmwares";
+            this.listViewFirmwares.Size = new Size(224, 242);
+            this.listViewFirmwares.TabIndex = 0;
+            this.listViewFirmwares.UseCompatibleStateImageBehavior = false;
+            this.listViewFirmwares.View = View.Details;
+            this.listViewFirmwares.Columns.Add("Firmware", 140);
+            this.listViewFirmwares.Columns.Add("Date", 80);
+            this.listViewFirmwares.SelectedIndexChanged += this.listViewFirmwares_SelectedIndexChanged;
+            // 
+            // panelFirmwareActions
+            // 
+            this.panelFirmwareActions.Dock = DockStyle.Top;
+            this.panelFirmwareActions.Controls.Add(this.btnScanCloud);
+            this.panelFirmwareActions.Controls.Add(this.btnScanLocal);
+            this.panelFirmwareActions.Location = new Point(8, 24);
+            this.panelFirmwareActions.Name = "panelFirmwareActions";
+            this.panelFirmwareActions.Size = new Size(224, 40);
+            this.panelFirmwareActions.TabIndex = 1;
+            // 
+            // btnScanCloud
+            // 
+            this.btnScanCloud.Location = new Point(118, 5);
+            this.btnScanCloud.Name = "btnScanCloud";
+            this.btnScanCloud.Size = new Size(100, 28);
+            this.btnScanCloud.TabIndex = 1;
+            this.btnScanCloud.Text = "☁ Scan Cloud";
+            this.btnScanCloud.UseVisualStyleBackColor = true;
+            this.btnScanCloud.Click += this.btnScanCloud_Click;
+            // 
+            // btnScanLocal
+            // 
+            this.btnScanLocal.Location = new Point(5, 5);
+            this.btnScanLocal.Name = "btnScanLocal";
+            this.btnScanLocal.Size = new Size(100, 28);
+            this.btnScanLocal.TabIndex = 0;
+            this.btnScanLocal.Text = "📁 Scan Local";
+            this.btnScanLocal.UseVisualStyleBackColor = true;
+            this.btnScanLocal.Click += this.btnScanLocal_Click;
+            // 
+            // panelFirmwareFolder
+            // 
+            this.panelFirmwareFolder.Dock = DockStyle.Bottom;
+            this.panelFirmwareFolder.Controls.Add(this.lblFirmwareFolder);
+            this.panelFirmwareFolder.Controls.Add(this.txtFirmwareFolder);
+            this.panelFirmwareFolder.Controls.Add(this.btnBrowseFirmwareFolder);
+            this.panelFirmwareFolder.Controls.Add(this.btnOpenFirmwareFolder);
+            this.panelFirmwareFolder.Location = new Point(8, 306);
+            this.panelFirmwareFolder.Name = "panelFirmwareFolder";
+            this.panelFirmwareFolder.Size = new Size(224, 70);
+            this.panelFirmwareFolder.TabIndex = 2;
+            // 
+            // lblFirmwareFolder
+            // 
+            this.lblFirmwareFolder.AutoSize = true;
+            this.lblFirmwareFolder.Location = new Point(3, 5);
+            this.lblFirmwareFolder.Name = "lblFirmwareFolder";
+            this.lblFirmwareFolder.Size = new Size(95, 15);
+            this.lblFirmwareFolder.TabIndex = 0;
+            this.lblFirmwareFolder.Text = "Firmware Folder:";
+            // 
+            // txtFirmwareFolder
+            // 
+            this.txtFirmwareFolder.Location = new Point(3, 23);
+            this.txtFirmwareFolder.Name = "txtFirmwareFolder";
+            this.txtFirmwareFolder.ReadOnly = true;
+            this.txtFirmwareFolder.Size = new Size(218, 23);
+            this.txtFirmwareFolder.TabIndex = 1;
+            this.txtFirmwareFolder.BackColor = SystemColors.Control;
             // 
             // btnBrowseFirmwareFolder
             // 
-            this.btnBrowseFirmwareFolder.Anchor = AnchorStyles.Top | AnchorStyles.Right;
-            this.btnBrowseFirmwareFolder.Location = new Point(390, 95);
+            this.btnBrowseFirmwareFolder.Location = new Point(3, 48);
             this.btnBrowseFirmwareFolder.Name = "btnBrowseFirmwareFolder";
-            this.btnBrowseFirmwareFolder.Size = new Size(70, 23);
-            this.btnBrowseFirmwareFolder.TabIndex = 8;
+            this.btnBrowseFirmwareFolder.Size = new Size(105, 23);
+            this.btnBrowseFirmwareFolder.TabIndex = 2;
             this.btnBrowseFirmwareFolder.Text = "Change...";
             this.btnBrowseFirmwareFolder.UseVisualStyleBackColor = true;
             this.btnBrowseFirmwareFolder.Click += this.btnBrowseFirmwareFolder_Click;
             // 
             // btnOpenFirmwareFolder
             // 
-            this.btnOpenFirmwareFolder.Anchor = AnchorStyles.Top | AnchorStyles.Right;
-            this.btnOpenFirmwareFolder.Location = new Point(470, 95);
+            this.btnOpenFirmwareFolder.Location = new Point(116, 48);
             this.btnOpenFirmwareFolder.Name = "btnOpenFirmwareFolder";
-            this.btnOpenFirmwareFolder.Size = new Size(60, 23);
-            this.btnOpenFirmwareFolder.TabIndex = 7;
+            this.btnOpenFirmwareFolder.Size = new Size(105, 23);
+            this.btnOpenFirmwareFolder.TabIndex = 3;
             this.btnOpenFirmwareFolder.Text = "📁 Open";
             this.btnOpenFirmwareFolder.UseVisualStyleBackColor = true;
             this.btnOpenFirmwareFolder.Click += this.btnOpenFirmwareFolder_Click;
             // 
-            // txtFirmwareFolder
+            // groupBoxFlashOperation
             // 
-            this.txtFirmwareFolder.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
-            this.txtFirmwareFolder.Location = new Point(15, 95);
-            this.txtFirmwareFolder.Name = "txtFirmwareFolder";
-            this.txtFirmwareFolder.ReadOnly = true;
-            this.txtFirmwareFolder.Size = new Size(365, 23);
-            this.txtFirmwareFolder.TabIndex = 6;
-            this.txtFirmwareFolder.BackColor = SystemColors.Control;
+            this.groupBoxFlashOperation.Dock = DockStyle.Fill;
+            this.groupBoxFlashOperation.Controls.Add(this.panelSelectedFirmware);
+            this.groupBoxFlashOperation.Controls.Add(this.groupBoxDevices);
+            this.groupBoxFlashOperation.Controls.Add(this.groupBoxFlash);
+            this.groupBoxFlashOperation.Location = new Point(0, 0);
+            this.groupBoxFlashOperation.Name = "groupBoxFlashOperation";
+            this.groupBoxFlashOperation.Padding = new Padding(8);
+            this.groupBoxFlashOperation.Size = new Size(302, 384);
+            this.groupBoxFlashOperation.TabIndex = 1;
+            this.groupBoxFlashOperation.TabStop = false;
+            this.groupBoxFlashOperation.Text = "Flash Operation";
             // 
-            // lblFirmwareFolder
+            // panelSelectedFirmware
             // 
-            this.lblFirmwareFolder.AutoSize = true;
-            this.lblFirmwareFolder.Location = new Point(15, 75);
-            this.lblFirmwareFolder.Name = "lblFirmwareFolder";
-            this.lblFirmwareFolder.Size = new Size(150, 15);
-            this.lblFirmwareFolder.TabIndex = 5;
-            this.lblFirmwareFolder.Text = "Firmware Folder (log: flasher.log):";
+            this.panelSelectedFirmware.Dock = DockStyle.Top;
+            this.panelSelectedFirmware.Controls.Add(this.lblSelectedFirmwareTitle);
+            this.panelSelectedFirmware.Controls.Add(this.lblSelectedFirmwareName);
+            this.panelSelectedFirmware.Controls.Add(this.lblSelectedFirmwareDate);
+            this.panelSelectedFirmware.Controls.Add(this.lblSelectedFirmwareStatus);
+            this.panelSelectedFirmware.Controls.Add(this.btnDownloadFirmware);
+            this.panelSelectedFirmware.Location = new Point(8, 24);
+            this.panelSelectedFirmware.Name = "panelSelectedFirmware";
+            this.panelSelectedFirmware.Size = new Size(286, 100);
+            this.panelSelectedFirmware.TabIndex = 0;
+            this.panelSelectedFirmware.BorderStyle = BorderStyle.FixedSingle;
+            this.panelSelectedFirmware.BackColor = SystemColors.ControlLight;
             // 
-            // lblFirmwareStatus
+            // lblSelectedFirmwareTitle
             // 
-            this.lblFirmwareStatus.AutoSize = true;
-            this.lblFirmwareStatus.ForeColor = SystemColors.GrayText;
-            this.lblFirmwareStatus.Location = new Point(330, 20);
-            this.lblFirmwareStatus.Name = "lblFirmwareStatus";
-            this.lblFirmwareStatus.Size = new Size(0, 15);
-            this.lblFirmwareStatus.TabIndex = 3;
+            this.lblSelectedFirmwareTitle.AutoSize = true;
+            this.lblSelectedFirmwareTitle.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
+            this.lblSelectedFirmwareTitle.Location = new Point(8, 8);
+            this.lblSelectedFirmwareTitle.Name = "lblSelectedFirmwareTitle";
+            this.lblSelectedFirmwareTitle.Size = new Size(115, 15);
+            this.lblSelectedFirmwareTitle.TabIndex = 0;
+            this.lblSelectedFirmwareTitle.Text = "Selected Firmware:";
             // 
-            // btnRefreshFirmware
+            // lblSelectedFirmwareName
             // 
-            this.btnRefreshFirmware.Anchor = AnchorStyles.Top | AnchorStyles.Right;
-            this.btnRefreshFirmware.Location = new Point(470, 40);
-            this.btnRefreshFirmware.Name = "btnRefreshFirmware";
-            this.btnRefreshFirmware.Size = new Size(75, 25);
-            this.btnRefreshFirmware.TabIndex = 2;
-            this.btnRefreshFirmware.Text = "Refresh";
-            this.btnRefreshFirmware.UseVisualStyleBackColor = true;
-            this.btnRefreshFirmware.Click += this.btnRefreshFirmware_Click;
+            this.lblSelectedFirmwareName.AutoSize = true;
+            this.lblSelectedFirmwareName.Font = new Font("Segoe UI", 10F, FontStyle.Bold);
+            this.lblSelectedFirmwareName.Location = new Point(8, 28);
+            this.lblSelectedFirmwareName.Name = "lblSelectedFirmwareName";
+            this.lblSelectedFirmwareName.Size = new Size(120, 19);
+            this.lblSelectedFirmwareName.TabIndex = 1;
+            this.lblSelectedFirmwareName.Text = "No selection";
             // 
-            // cmbFirmwareVersion
+            // lblSelectedFirmwareDate
             // 
-            this.cmbFirmwareVersion.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
-            this.cmbFirmwareVersion.DisplayMember = "DisplayText";
-            this.cmbFirmwareVersion.DropDownStyle = ComboBoxStyle.DropDownList;
-            this.cmbFirmwareVersion.FormattingEnabled = true;
-            this.cmbFirmwareVersion.Location = new Point(15, 40);
-            this.cmbFirmwareVersion.Name = "cmbFirmwareVersion";
-            this.cmbFirmwareVersion.Size = new Size(310, 23);
-            this.cmbFirmwareVersion.TabIndex = 1;
-            this.cmbFirmwareVersion.SelectedIndexChanged += this.cmbFirmwareVersion_SelectedIndexChanged;
+            this.lblSelectedFirmwareDate.AutoSize = true;
+            this.lblSelectedFirmwareDate.ForeColor = SystemColors.GrayText;
+            this.lblSelectedFirmwareDate.Location = new Point(8, 50);
+            this.lblSelectedFirmwareDate.Name = "lblSelectedFirmwareDate";
+            this.lblSelectedFirmwareDate.Size = new Size(0, 15);
+            this.lblSelectedFirmwareDate.TabIndex = 2;
             // 
-            // lblFirmwareVersion
+            // lblSelectedFirmwareStatus
             // 
-            this.lblFirmwareVersion.AutoSize = true;
-            this.lblFirmwareVersion.Location = new Point(15, 20);
-            this.lblFirmwareVersion.Name = "lblFirmwareVersion";
-            this.lblFirmwareVersion.Size = new Size(102, 15);
-            this.lblFirmwareVersion.TabIndex = 0;
-            this.lblFirmwareVersion.Text = "Firmware Version:";
+            this.lblSelectedFirmwareStatus.AutoSize = true;
+            this.lblSelectedFirmwareStatus.Location = new Point(8, 68);
+            this.lblSelectedFirmwareStatus.Name = "lblSelectedFirmwareStatus";
+            this.lblSelectedFirmwareStatus.Size = new Size(0, 15);
+            this.lblSelectedFirmwareStatus.TabIndex = 3;
             // 
-            // groupBoxDevices
+            // btnDownloadFirmware
             // 
-            this.groupBoxDevices.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
-            this.groupBoxDevices.Controls.Add(this.btnRefreshDevices);
+            this.btnDownloadFirmware.Anchor = AnchorStyles.Top | AnchorStyles.Right;
+            this.btnDownloadFirmware.BackColor = Color.FromArgb(0, 120, 215);
+            this.btnDownloadFirmware.FlatStyle = FlatStyle.Flat;
+            this.btnDownloadFirmware.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
+            this.btnDownloadFirmware.ForeColor = Color.White;
+            this.btnDownloadFirmware.Location = new Point(170, 25);
+            this.btnDownloadFirmware.Name = "btnDownloadFirmware";
+            this.btnDownloadFirmware.Size = new Size(105, 28);
+            this.btnDownloadFirmware.TabIndex = 4;
+            this.btnDownloadFirmware.Text = "⬇ Download";
+            this.btnDownloadFirmware.UseVisualStyleBackColor = false;
+            this.btnDownloadFirmware.Visible = false;
+            this.btnDownloadFirmware.Click += this.btnDownloadFirmware_Click;
+            // 
+            // groupBoxDevices (moved inside groupBoxFlashOperation)
+            // 
+            this.groupBoxDevices.Dock = DockStyle.Top;
             this.groupBoxDevices.Controls.Add(this.listBoxDevices);
-            this.groupBoxDevices.Controls.Add(this.lblDevices);
-            this.groupBoxDevices.Location = new Point(6, 142);
+            this.groupBoxDevices.Controls.Add(this.btnRefreshDevices);
+            this.groupBoxDevices.Location = new Point(8, 124);
             this.groupBoxDevices.Name = "groupBoxDevices";
-            this.groupBoxDevices.Size = new Size(540, 160);
+            this.groupBoxDevices.Size = new Size(286, 140);
             this.groupBoxDevices.TabIndex = 1;
             this.groupBoxDevices.TabStop = false;
-            this.groupBoxDevices.Text = "ESP Devices";
+            this.groupBoxDevices.Text = "Target Device";
             // 
             // btnRefreshDevices
             // 
             this.btnRefreshDevices.Anchor = AnchorStyles.Top | AnchorStyles.Right;
-            this.btnRefreshDevices.Location = new Point(450, 20);
+            this.btnRefreshDevices.Location = new Point(200, 18);
             this.btnRefreshDevices.Name = "btnRefreshDevices";
             this.btnRefreshDevices.Size = new Size(75, 25);
-            this.btnRefreshDevices.TabIndex = 2;
+            this.btnRefreshDevices.TabIndex = 1;
             this.btnRefreshDevices.Text = "Refresh";
             this.btnRefreshDevices.UseVisualStyleBackColor = true;
             this.btnRefreshDevices.Click += this.btnRefreshDevices_Click;
@@ -235,39 +335,30 @@ namespace ESPFlasher
             this.listBoxDevices.DisplayMember = "DisplayText";
             this.listBoxDevices.FormattingEnabled = true;
             this.listBoxDevices.ItemHeight = 15;
-            this.listBoxDevices.Location = new Point(15, 50);
+            this.listBoxDevices.Location = new Point(10, 48);
             this.listBoxDevices.Name = "listBoxDevices";
-            this.listBoxDevices.Size = new Size(510, 124);
-            this.listBoxDevices.TabIndex = 1;
+            this.listBoxDevices.Size = new Size(265, 79);
+            this.listBoxDevices.TabIndex = 0;
             this.listBoxDevices.SelectedIndexChanged += this.listBoxDevices_SelectedIndexChanged;
-            // 
-            // lblDevices
-            // 
-            this.lblDevices.AutoSize = true;
-            this.lblDevices.Location = new Point(15, 25);
-            this.lblDevices.Name = "lblDevices";
-            this.lblDevices.Size = new Size(130, 15);
-            this.lblDevices.TabIndex = 0;
-            this.lblDevices.Text = "Connected ESP Devices:";
             // 
             // groupBoxFlash
             // 
-            this.groupBoxFlash.Anchor = AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
+            this.groupBoxFlash.Dock = DockStyle.Bottom;
             this.groupBoxFlash.Controls.Add(this.progressBarFlash);
             this.groupBoxFlash.Controls.Add(this.btnFlash);
-            this.groupBoxFlash.Location = new Point(6, 308);
+            this.groupBoxFlash.Location = new Point(8, 264);
             this.groupBoxFlash.Name = "groupBoxFlash";
-            this.groupBoxFlash.Size = new Size(540, 76);
+            this.groupBoxFlash.Size = new Size(286, 112);
             this.groupBoxFlash.TabIndex = 2;
             this.groupBoxFlash.TabStop = false;
-            this.groupBoxFlash.Text = "Flash Operation";
+            this.groupBoxFlash.Text = "Flash";
             // 
             // progressBarFlash
             // 
             this.progressBarFlash.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
-            this.progressBarFlash.Location = new Point(15, 50);
+            this.progressBarFlash.Location = new Point(10, 80);
             this.progressBarFlash.Name = "progressBarFlash";
-            this.progressBarFlash.Size = new Size(510, 20);
+            this.progressBarFlash.Size = new Size(265, 20);
             this.progressBarFlash.TabIndex = 1;
             this.progressBarFlash.Visible = false;
             // 
@@ -276,11 +367,11 @@ namespace ESPFlasher
             this.btnFlash.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
             this.btnFlash.BackColor = Color.FromArgb(0, 120, 215);
             this.btnFlash.FlatStyle = FlatStyle.Flat;
-            this.btnFlash.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
+            this.btnFlash.Font = new Font("Segoe UI", 10F, FontStyle.Bold);
             this.btnFlash.ForeColor = Color.White;
-            this.btnFlash.Location = new Point(15, 20);
+            this.btnFlash.Location = new Point(10, 25);
             this.btnFlash.Name = "btnFlash";
-            this.btnFlash.Size = new Size(510, 30);
+            this.btnFlash.Size = new Size(265, 45);
             this.btnFlash.TabIndex = 0;
             this.btnFlash.Text = "Flash Firmware";
             this.btnFlash.UseVisualStyleBackColor = false;
@@ -503,14 +594,21 @@ namespace ESPFlasher
 
         private TabControl tabControl;
         private TabPage tabPageFlash;
-        private GroupBox groupBoxFirmware;
-        private Label lblFirmwareVersion;
-        private ComboBox cmbFirmwareVersion;
-        private Button btnBrowseLocal;
-        private Button btnRefreshFirmware;
-        private Label lblFirmwareStatus;
+        private SplitContainer splitContainerFlash;
+        private GroupBox groupBoxFirmwareLibrary;
+        private ListView listViewFirmwares;
+        private Panel panelFirmwareActions;
+        private Button btnScanCloud;
+        private Button btnScanLocal;
+        private Panel panelFirmwareFolder;
+        private GroupBox groupBoxFlashOperation;
+        private Panel panelSelectedFirmware;
+        private Label lblSelectedFirmwareTitle;
+        private Label lblSelectedFirmwareName;
+        private Label lblSelectedFirmwareDate;
+        private Label lblSelectedFirmwareStatus;
+        private Button btnDownloadFirmware;
         private GroupBox groupBoxDevices;
-        private Label lblDevices;
         private ListBox listBoxDevices;
         private Button btnRefreshDevices;
         private GroupBox groupBoxFlash;
@@ -548,6 +646,7 @@ namespace ESPFlasher
             {
                 _downloadService.ClearCache();
                 MessageBox.Show("Cache cleared successfully.", "Cache Cleared", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                btnScanLocal_Click(sender, e);
             }
         }
 
