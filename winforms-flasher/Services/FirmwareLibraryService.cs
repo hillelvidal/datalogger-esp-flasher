@@ -8,6 +8,7 @@ namespace ESPFlasher.Services
         private readonly ILogger _logger;
         private readonly string _firmwareFolder;
         private readonly BuildInfoParser _buildInfoParser;
+        private const string CommonFolderName = "_common";
         
         public FirmwareLibraryService(ILogger logger, string firmwareFolder)
         {
@@ -15,6 +16,33 @@ namespace ESPFlasher.Services
             _firmwareFolder = firmwareFolder;
             _buildInfoParser = new BuildInfoParser(logger);
             Directory.CreateDirectory(_firmwareFolder);
+            EnsureCommonFolderExists();
+        }
+        
+        private void EnsureCommonFolderExists()
+        {
+            var commonPath = Path.Combine(_firmwareFolder, CommonFolderName);
+            Directory.CreateDirectory(commonPath);
+        }
+        
+        public string GetCommonFolderPath()
+        {
+            return Path.Combine(_firmwareFolder, CommonFolderName);
+        }
+        
+        public string GetBootloaderPath()
+        {
+            return Path.Combine(GetCommonFolderPath(), "bootloader.bin");
+        }
+        
+        public string GetPartitionsPath()
+        {
+            return Path.Combine(GetCommonFolderPath(), "partitions.bin");
+        }
+        
+        public bool HasSharedFiles()
+        {
+            return File.Exists(GetBootloaderPath()) && File.Exists(GetPartitionsPath());
         }
         
         public List<FirmwareItem> ScanLocalFirmwares()
@@ -155,6 +183,9 @@ namespace ESPFlasher.Services
                 return false;
             
             if (!File.Exists(item.LocalPath))
+                return false;
+            
+            if (!HasSharedFiles())
                 return false;
             
             return true;

@@ -49,6 +49,9 @@ namespace ESPFlasher.Services
             try
             {
                 await DownloadFileAsync(firmware.FirmwareUrl, firmwarePath, firmware.FileSize);
+                
+                // Download shared bootloader and partitions to _common folder
+                await EnsureSharedFilesDownloadedAsync(firmware);
 
                 _logger.LogInformation($"Firmware {firmware.Version} downloaded successfully to {versionFolder}");
                 return firmwarePath;
@@ -63,6 +66,27 @@ namespace ESPFlasher.Services
                 }
                 
                 throw;
+            }
+        }
+        
+        private async Task EnsureSharedFilesDownloadedAsync(FirmwareVersion firmware)
+        {
+            var commonFolder = Path.Combine(_downloadDirectory, "_common");
+            Directory.CreateDirectory(commonFolder);
+            
+            var bootloaderPath = Path.Combine(commonFolder, "bootloader.bin");
+            var partitionsPath = Path.Combine(commonFolder, "partitions.bin");
+            
+            if (!File.Exists(bootloaderPath) && !string.IsNullOrEmpty(firmware.BootloaderUrl))
+            {
+                _logger.LogInformation("Downloading shared bootloader.bin");
+                await DownloadFileAsync(firmware.BootloaderUrl, bootloaderPath, 0);
+            }
+            
+            if (!File.Exists(partitionsPath) && !string.IsNullOrEmpty(firmware.PartitionsUrl))
+            {
+                _logger.LogInformation("Downloading shared partitions.bin");
+                await DownloadFileAsync(firmware.PartitionsUrl, partitionsPath, 0);
             }
         }
         

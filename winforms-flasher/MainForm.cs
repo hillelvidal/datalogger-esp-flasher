@@ -113,6 +113,11 @@ namespace ESPFlasher
             await RefreshDevicesAsync();
             
             btnScanLocal_Click(this, EventArgs.Empty);
+            
+            if (!_libraryService.HasSharedFiles())
+            {
+                lblStatus.Text = "Warning: Shared bootloader/partitions not found. Download firmware from cloud first.";
+            }
         }
 
 
@@ -177,11 +182,19 @@ namespace ESPFlasher
             
             if (!_libraryService.ValidateFirmwareForFlashing(_selectedFirmware))
             {
+                var missingFiles = new List<string>();
+                if (!File.Exists(_selectedFirmware.LocalPath))
+                    missingFiles.Add($"Firmware: {_selectedFirmware.LocalPath}");
+                if (!File.Exists(_libraryService.GetBootloaderPath()))
+                    missingFiles.Add($"Bootloader: {_libraryService.GetBootloaderPath()}");
+                if (!File.Exists(_libraryService.GetPartitionsPath()))
+                    missingFiles.Add($"Partitions: {_libraryService.GetPartitionsPath()}");
+                
                 MessageBox.Show(
-                    "Cannot flash: Firmware file not found.\n\n" +
-                    $"Expected: {_selectedFirmware.LocalPath}\n\n" +
-                    "Please re-scan or re-download the firmware.",
-                    "Missing Firmware",
+                    "Cannot flash: Missing required files.\n\n" +
+                    string.Join("\n", missingFiles) + "\n\n" +
+                    "Download a firmware from cloud to get all required files.",
+                    "Missing Files",
                     MessageBoxButtons.OK,
                     MessageBoxIcon.Error);
                 return;
@@ -309,29 +322,16 @@ namespace ESPFlasher
             
             try
             {
-                // Open log file if it exists, otherwise open folder
-                var logFile = Path.Combine(firmwareFolder, "flasher.log");
-                if (File.Exists(logFile))
+                System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
                 {
-                    System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
-                    {
-                        FileName = logFile,
-                        UseShellExecute = true
-                    });
-                }
-                else
-                {
-                    System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
-                    {
-                        FileName = firmwareFolder,
-                        UseShellExecute = true,
-                        Verb = "open"
-                    });
-                }
+                    FileName = firmwareFolder,
+                    UseShellExecute = true,
+                    Verb = "open"
+                });
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Failed to open:\n{ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show($"Failed to open folder:\n{ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 

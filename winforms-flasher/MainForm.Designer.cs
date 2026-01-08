@@ -52,10 +52,8 @@ namespace ESPFlasher
             this.lblSelectedFirmwareDate = new Label();
             this.lblSelectedFirmwareStatus = new Label();
             this.btnDownloadFirmware = new Button();
-            this.groupBoxDevices = new GroupBox();
             this.listBoxDevices = new ListBox();
             this.btnRefreshDevices = new Button();
-            this.groupBoxFlash = new GroupBox();
             this.progressBarFlash = new ProgressBar();
             this.btnFlash = new Button();
             this.tabPageMonitor = new TabPage();
@@ -88,8 +86,6 @@ namespace ESPFlasher
             this.panelFirmwareFolder.SuspendLayout();
             this.groupBoxFlashOperation.SuspendLayout();
             this.panelSelectedFirmware.SuspendLayout();
-            this.groupBoxDevices.SuspendLayout();
-            this.groupBoxFlash.SuspendLayout();
             this.tabPageMonitor.SuspendLayout();
             this.groupBoxMonitorOutput.SuspendLayout();
             this.groupBoxMonitorControl.SuspendLayout();
@@ -244,8 +240,10 @@ namespace ESPFlasher
             // 
             this.groupBoxFlashOperation.Dock = DockStyle.Fill;
             this.groupBoxFlashOperation.Controls.Add(this.panelSelectedFirmware);
-            this.groupBoxFlashOperation.Controls.Add(this.groupBoxDevices);
-            this.groupBoxFlashOperation.Controls.Add(this.groupBoxFlash);
+            this.groupBoxFlashOperation.Controls.Add(this.listBoxDevices);
+            this.groupBoxFlashOperation.Controls.Add(this.btnRefreshDevices);
+            this.groupBoxFlashOperation.Controls.Add(this.btnFlash);
+            this.groupBoxFlashOperation.Controls.Add(this.progressBarFlash);
             this.groupBoxFlashOperation.Location = new Point(0, 0);
             this.groupBoxFlashOperation.Name = "groupBoxFlashOperation";
             this.groupBoxFlashOperation.Padding = new Padding(8);
@@ -322,60 +320,35 @@ namespace ESPFlasher
             this.btnDownloadFirmware.Visible = false;
             this.btnDownloadFirmware.Click += this.btnDownloadFirmware_Click;
             // 
-            // groupBoxDevices (moved inside groupBoxFlashOperation)
+            // listBoxDevices
             // 
-            this.groupBoxDevices.Dock = DockStyle.Top;
-            this.groupBoxDevices.Controls.Add(this.listBoxDevices);
-            this.groupBoxDevices.Controls.Add(this.btnRefreshDevices);
-            this.groupBoxDevices.Location = new Point(8, 124);
-            this.groupBoxDevices.Name = "groupBoxDevices";
-            this.groupBoxDevices.Size = new Size(286, 140);
-            this.groupBoxDevices.TabIndex = 1;
-            this.groupBoxDevices.TabStop = false;
-            this.groupBoxDevices.Text = "Target Device";
+            this.listBoxDevices.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
+            this.listBoxDevices.FormattingEnabled = true;
+            this.listBoxDevices.ItemHeight = 15;
+            this.listBoxDevices.Location = new Point(8, 130);
+            this.listBoxDevices.Name = "listBoxDevices";
+            this.listBoxDevices.Size = new Size(286, 79);
+            this.listBoxDevices.TabIndex = 1;
+            this.listBoxDevices.SelectedIndexChanged += this.listBoxDevices_SelectedIndexChanged;
             // 
             // btnRefreshDevices
             // 
-            this.btnRefreshDevices.Anchor = AnchorStyles.Top | AnchorStyles.Right;
-            this.btnRefreshDevices.Location = new Point(200, 18);
+            this.btnRefreshDevices.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
+            this.btnRefreshDevices.Location = new Point(8, 215);
             this.btnRefreshDevices.Name = "btnRefreshDevices";
-            this.btnRefreshDevices.Size = new Size(75, 25);
-            this.btnRefreshDevices.TabIndex = 1;
-            this.btnRefreshDevices.Text = "Refresh";
+            this.btnRefreshDevices.Size = new Size(286, 29);
+            this.btnRefreshDevices.TabIndex = 2;
+            this.btnRefreshDevices.Text = "🔄 Refresh Devices";
             this.btnRefreshDevices.UseVisualStyleBackColor = true;
             this.btnRefreshDevices.Click += this.btnRefreshDevices_Click;
-            // 
-            // listBoxDevices
-            // 
-            this.listBoxDevices.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
-            this.listBoxDevices.DisplayMember = "DisplayText";
-            this.listBoxDevices.FormattingEnabled = true;
-            this.listBoxDevices.ItemHeight = 15;
-            this.listBoxDevices.Location = new Point(10, 48);
-            this.listBoxDevices.Name = "listBoxDevices";
-            this.listBoxDevices.Size = new Size(265, 79);
-            this.listBoxDevices.TabIndex = 0;
-            this.listBoxDevices.SelectedIndexChanged += this.listBoxDevices_SelectedIndexChanged;
-            // 
-            // groupBoxFlash
-            // 
-            this.groupBoxFlash.Dock = DockStyle.Bottom;
-            this.groupBoxFlash.Controls.Add(this.progressBarFlash);
-            this.groupBoxFlash.Controls.Add(this.btnFlash);
-            this.groupBoxFlash.Location = new Point(8, 264);
-            this.groupBoxFlash.Name = "groupBoxFlash";
-            this.groupBoxFlash.Size = new Size(286, 112);
-            this.groupBoxFlash.TabIndex = 2;
-            this.groupBoxFlash.TabStop = false;
-            this.groupBoxFlash.Text = "Flash";
             // 
             // progressBarFlash
             // 
             this.progressBarFlash.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
-            this.progressBarFlash.Location = new Point(10, 80);
+            this.progressBarFlash.Location = new Point(8, 306);
             this.progressBarFlash.Name = "progressBarFlash";
-            this.progressBarFlash.Size = new Size(265, 20);
-            this.progressBarFlash.TabIndex = 1;
+            this.progressBarFlash.Size = new Size(286, 23);
+            this.progressBarFlash.TabIndex = 4;
             this.progressBarFlash.Visible = false;
             // 
             // btnFlash
@@ -385,11 +358,11 @@ namespace ESPFlasher
             this.btnFlash.FlatStyle = FlatStyle.Flat;
             this.btnFlash.Font = new Font("Segoe UI", 10F, FontStyle.Bold);
             this.btnFlash.ForeColor = Color.White;
-            this.btnFlash.Location = new Point(10, 25);
+            this.btnFlash.Location = new Point(8, 260);
             this.btnFlash.Name = "btnFlash";
-            this.btnFlash.Size = new Size(265, 45);
-            this.btnFlash.TabIndex = 0;
-            this.btnFlash.Text = "Flash Firmware";
+            this.btnFlash.Size = new Size(286, 40);
+            this.btnFlash.TabIndex = 3;
+            this.btnFlash.Text = "⚡ FLASH FIRMWARE";
             this.btnFlash.UseVisualStyleBackColor = false;
             this.btnFlash.Click += this.btnFlash_Click;
             // 
@@ -600,8 +573,6 @@ namespace ESPFlasher
             this.groupBoxFlashOperation.ResumeLayout(false);
             this.panelSelectedFirmware.ResumeLayout(false);
             this.panelSelectedFirmware.PerformLayout();
-            this.groupBoxDevices.ResumeLayout(false);
-            this.groupBoxFlash.ResumeLayout(false);
             this.tabPageMonitor.ResumeLayout(false);
             this.groupBoxMonitorOutput.ResumeLayout(false);
             this.groupBoxMonitorControl.ResumeLayout(false);
@@ -632,10 +603,8 @@ namespace ESPFlasher
         private Label lblSelectedFirmwareDate;
         private Label lblSelectedFirmwareStatus;
         private Button btnDownloadFirmware;
-        private GroupBox groupBoxDevices;
         private ListBox listBoxDevices;
         private Button btnRefreshDevices;
-        private GroupBox groupBoxFlash;
         private Button btnFlash;
         private ProgressBar progressBarFlash;
         private TabPage tabPageMonitor;

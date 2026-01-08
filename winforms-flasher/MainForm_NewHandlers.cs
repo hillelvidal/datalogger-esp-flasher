@@ -217,9 +217,16 @@ namespace ESPFlasher
         {
             bool hasFirmware = _selectedFirmware != null && _selectedFirmware.Status == FirmwareStatus.Downloaded;
             bool hasDevice = listBoxDevices.SelectedItem != null;
+            bool hasSharedFiles = _libraryService.HasSharedFiles();
             bool notFlashing = _flashCancellationTokenSource == null;
             
-            btnFlash.Enabled = hasFirmware && hasDevice && notFlashing;
+            btnFlash.Enabled = hasFirmware && hasDevice && hasSharedFiles && notFlashing;
+            
+            if (!hasSharedFiles && hasFirmware)
+            {
+                lblSelectedFirmwareStatus.Text = "⚠ Missing bootloader/partitions in _common folder";
+                lblSelectedFirmwareStatus.ForeColor = System.Drawing.Color.Red;
+            }
         }
     }
 }
