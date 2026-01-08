@@ -107,7 +107,7 @@ namespace ESPFlasher.Services
 
         private async Task<bool> EraseFlashAsync(string portName, CancellationToken cancellationToken)
         {
-            var args = $"--port {portName} --chip esp32s3 --before default-reset --after hard-reset erase-flash";
+            var args = $"--port {portName} --chip esp32s3 --before default_reset --after hard_reset erase_flash";
             var result = await RunEsptoolAsync(args, cancellationToken);
             return result.Contains("erased successfully") || result.Contains("Chip erase completed");
         }
@@ -130,7 +130,7 @@ namespace ESPFlasher.Services
             _logger.LogInformation($"Partitions found: {hasPartitions} at {partitionsPath}");
             
             // Build the flash command with all available files
-            var args = $"--port {portName} --chip esp32s3 --baud 460800 --before default-reset --after hard-reset write-flash --flash-mode dio --flash-freq 80m --flash-size detect";
+            var args = $"--port {portName} --chip esp32s3 --baud 460800 --before default_reset --after hard_reset write_flash --flash_mode dio --flash_freq 80m --flash_size detect";
             
             if (hasBootloader)
             {
