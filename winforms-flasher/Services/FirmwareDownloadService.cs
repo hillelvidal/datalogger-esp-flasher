@@ -31,12 +31,13 @@ namespace ESPFlasher.Services
 
         public async Task<string> DownloadFirmwareAsync(FirmwareVersion firmware)
         {
-            // New structure: firmware-20260108.4/scanin-datalogger-20260108.4.bin
             var version = firmware.Version.TrimStart('v');
             var versionFolder = Path.Combine(_downloadDirectory, $"firmware-{version}");
             Directory.CreateDirectory(versionFolder);
             
-            var firmwarePath = Path.Combine(versionFolder, $"scanin-datalogger-{version}.bin");
+            // Extract filename from URL or use default naming
+            var firmwareFileName = GetFileNameFromUrl(firmware.FirmwareUrl) ?? $"scanin-datalogger-{version}.bin";
+            var firmwarePath = Path.Combine(versionFolder, firmwareFileName);
             
             if (IsFirmwareDownloaded(firmware))
             {
@@ -52,6 +53,13 @@ namespace ESPFlasher.Services
                 
                 // Download shared bootloader and partitions to _common folder
                 await EnsureSharedFilesDownloadedAsync(firmware);
+                
+                // Download build-info.txt if available
+                if (firmware.Files != null && firmware.Files.ContainsKey("build-info"))
+                {
+                    var buildInfoPath = Path.Combine(versionFolder, "build-info.txt");
+                    await DownloadFileAsync(firmware.Files["build-info"], buildInfoPath, 0);
+                }
 
                 _logger.LogInformation($"Firmware {firmware.Version} downloaded successfully to {versionFolder}");
                 return firmwarePath;
@@ -66,6 +74,25 @@ namespace ESPFlasher.Services
                 }
                 
                 throw;
+            }
+        }
+        
+        private string? GetFileNameFromUrl(string url)
+        {
+            try
+            {
+                // For Google Drive URLs, we can't extract filename easily
+                // Return null to use default naming
+                if (url.Contains("drive.google.com"))
+                    return null;
+                    
+                var uri = new Uri(url);
+                var fileName = Path.GetFileName(uri.LocalPath);
+                return string.IsNullOrEmpty(fileName) ? null : fileName;
+            }
+            catch
+            {
+                return null;
             }
         }
         
@@ -158,16 +185,42 @@ namespace ESPFlasher.Services
         {
             var version = firmware.Version.TrimStart('v');
             var versionFolder = Path.Combine(_downloadDirectory, $"firmware-{version}");
-            var firmwarePath = Path.Combine(versionFolder, $"scanin-datalogger-{version}.bin");
             
-            return File.Exists(firmwarePath);
+            if (!Directory.Exists(versionFolder))
+                return false;
+            
+            // Check if any .bin file exists (excluding bootloader/partitions)
+            var binFiles = Directory.GetFiles(versionFolder, "*.bin")
+                .Where(f => 
+                {
+                    var fileName = Path.GetFileName(f);
+                    return !fileName.Equals("bootloader.bin", StringComparison.OrdinalIgnoreCase) &&
+                           !fileName.Equals("partitions.bin", StringComparison.OrdinalIgnoreCase);
+                })
+                .ToList();
+            
+            return binFiles.Count > 0;
         }
         
         public string GetLocalFirmwarePath(FirmwareVersion firmware)
         {
             var version = firmware.Version.TrimStart('v');
             var versionFolder = Path.Combine(_downloadDirectory, $"firmware-{version}");
-            return Path.Combine(versionFolder, $"scanin-datalogger-{version}.bin");
+            
+            if (!Directory.Exists(versionFolder))
+                return Path.Combine(versionFolder, $"scanin-datalogger-{version}.bin");
+            
+            // Find any .bin file (excluding bootloader/partitions)
+            var binFiles = Directory.GetFiles(versionFolder, "*.bin")
+                .Where(f => 
+                {
+                    var fileName = Path.GetFileName(f);
+                    return !fileName.Equals("bootloader.bin", StringComparison.OrdinalIgnoreCase) &&
+                           !fileName.Equals("partitions.bin", StringComparison.OrdinalIgnoreCase);
+                })
+                .ToList();
+            
+            return binFiles.Count > 0 ? binFiles[0] : Path.Combine(versionFolder, $"scanin-datalogger-{version}.bin");
         }
 
         public async Task<bool> ValidateFirmwareFileAsync(string filePath, FirmwareVersion firmware)

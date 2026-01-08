@@ -62,16 +62,30 @@ namespace ESPFlasher.Services
                 {
                     var folderName = Path.GetFileName(subfolder);
                     
-                    // Skip non-firmware folders
-                    if (!folderName.StartsWith("firmware-"))
+                    // Skip non-firmware folders and _common folder
+                    if (!folderName.StartsWith("firmware-") || folderName == CommonFolderName)
                         continue;
                     
                     // Extract version from folder name: firmware-20260108.4 -> 20260108.4
                     var version = folderName.Replace("firmware-", "");
                     
-                    // Expected binary name: scanin-datalogger-20260108.4.bin
-                    var firmwarePath = Path.Combine(subfolder, $"scanin-datalogger-{version}.bin");
                     var buildInfoPath = Path.Combine(subfolder, "build-info.txt");
+                    
+                    // Find any .bin file that's not bootloader or partitions
+                    var binFiles = Directory.GetFiles(subfolder, "*.bin")
+                        .Where(f => 
+                        {
+                            var fileName = Path.GetFileName(f);
+                            return !fileName.Equals("bootloader.bin", StringComparison.OrdinalIgnoreCase) &&
+                                   !fileName.Equals("partitions.bin", StringComparison.OrdinalIgnoreCase);
+                        })
+                        .ToList();
+                    
+                    if (binFiles.Count == 0)
+                        continue;
+                    
+                    // Use the first .bin file found
+                    var firmwarePath = binFiles[0];
                     
                     if (File.Exists(firmwarePath))
                     {
@@ -174,7 +188,22 @@ namespace ESPFlasher.Services
         
         public string GetFirmwareBinPath(string version)
         {
-            return Path.Combine(GetFirmwareFolderPath(version), $"scanin-datalogger-{version}.bin");
+            var folderPath = GetFirmwareFolderPath(version);
+            
+            if (!Directory.Exists(folderPath))
+                return Path.Combine(folderPath, $"scanin-datalogger-{version}.bin");
+            
+            // Find any .bin file (excluding bootloader/partitions)
+            var binFiles = Directory.GetFiles(folderPath, "*.bin")
+                .Where(f => 
+                {
+                    var fileName = Path.GetFileName(f);
+                    return !fileName.Equals("bootloader.bin", StringComparison.OrdinalIgnoreCase) &&
+                           !fileName.Equals("partitions.bin", StringComparison.OrdinalIgnoreCase);
+                })
+                .ToList();
+            
+            return binFiles.Count > 0 ? binFiles[0] : Path.Combine(folderPath, $"scanin-datalogger-{version}.bin");
         }
         
         public bool ValidateFirmwareForFlashing(FirmwareItem item)

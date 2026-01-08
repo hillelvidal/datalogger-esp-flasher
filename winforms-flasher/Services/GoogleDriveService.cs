@@ -121,18 +121,28 @@ namespace ESPFlasher.Services
         {
             var files = await GetFilesInFolderAsync(folder.Id);
             
-            var firmwareFile = files.FirstOrDefault(f => f.Name.Equals("firmware.bin", StringComparison.OrdinalIgnoreCase));
+            // Extract version from folder name: firmware-20260108.4 -> 20260108.4
+            var version = folder.Name.Replace("firmware-", "");
+            
             var bootloaderFile = files.FirstOrDefault(f => f.Name.Equals("bootloader.bin", StringComparison.OrdinalIgnoreCase));
             var partitionsFile = files.FirstOrDefault(f => f.Name.Equals("partitions.bin", StringComparison.OrdinalIgnoreCase));
+            var buildInfoFile = files.FirstOrDefault(f => f.Name.Equals("build-info.txt", StringComparison.OrdinalIgnoreCase));
+            
+            // Accept any .bin file that's not bootloader or partitions as the main firmware
+            var firmwareFile = files.FirstOrDefault(f => 
+                f.Name.EndsWith(".bin", StringComparison.OrdinalIgnoreCase) &&
+                !f.Name.Equals("bootloader.bin", StringComparison.OrdinalIgnoreCase) &&
+                !f.Name.Equals("partitions.bin", StringComparison.OrdinalIgnoreCase));
 
             if (firmwareFile == null)
             {
+                _logger.LogWarning($"No firmware binary found in folder {folder.Name}");
                 return null;
             }
 
             var firmware = new FirmwareVersion
             {
-                Version = folder.Name,
+                Version = version,
                 Description = $"From Google Drive: {folder.Name}",
                 ReleaseDate = folder.ModifiedTime != DateTime.MinValue ? folder.ModifiedTime : folder.CreatedTime,
                 Files = new Dictionary<string, string>()
@@ -148,6 +158,11 @@ namespace ESPFlasher.Services
             if (partitionsFile != null)
             {
                 firmware.Files["partitions"] = GetDirectDownloadUrl(partitionsFile.Id);
+            }
+            
+            if (buildInfoFile != null)
+            {
+                firmware.Files["build-info"] = GetDirectDownloadUrl(buildInfoFile.Id);
             }
 
             if (firmwareFile.Size > 0)
