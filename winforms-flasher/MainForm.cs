@@ -113,11 +113,6 @@ namespace ESPFlasher
             await RefreshDevicesAsync();
             
             btnScanLocal_Click(this, EventArgs.Empty);
-            
-            if (!_libraryService.HasSharedFiles())
-            {
-                lblStatus.Text = "Warning: Shared bootloader/partitions not found. Download firmware from cloud first.";
-            }
         }
 
 
@@ -183,13 +178,10 @@ namespace ESPFlasher
             if (!_libraryService.ValidateFirmwareForFlashing(_selectedFirmware))
             {
                 MessageBox.Show(
-                    "Cannot flash: Missing required files.\n\n" +
-                    "Required:\n" +
-                    "- firmware.bin (in firmware folder)\n" +
-                    "- bootloader.bin (in _common folder)\n" +
-                    "- partitions.bin (in _common folder)\n\n" +
-                    "Download a firmware from cloud to get shared files.",
-                    "Missing Files",
+                    "Cannot flash: Firmware file not found.\n\n" +
+                    $"Expected: {_selectedFirmware.LocalPath}\n\n" +
+                    "Please re-scan or re-download the firmware.",
+                    "Missing Firmware",
                     MessageBoxButtons.OK,
                     MessageBoxIcon.Error);
                 return;

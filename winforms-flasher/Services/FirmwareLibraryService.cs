@@ -7,39 +7,14 @@ namespace ESPFlasher.Services
     {
         private readonly ILogger _logger;
         private readonly string _firmwareFolder;
-        private const string CommonFolderName = "_common";
+        private readonly BuildInfoParser _buildInfoParser;
         
         public FirmwareLibraryService(ILogger logger, string firmwareFolder)
         {
             _logger = logger;
             _firmwareFolder = firmwareFolder;
-            EnsureCommonFolderExists();
-        }
-        
-        private void EnsureCommonFolderExists()
-        {
-            var commonPath = Path.Combine(_firmwareFolder, CommonFolderName);
-            Directory.CreateDirectory(commonPath);
-        }
-        
-        public string GetCommonFolderPath()
-        {
-            return Path.Combine(_firmwareFolder, CommonFolderName);
-        }
-        
-        public string GetBootloaderPath()
-        {
-            return Path.Combine(GetCommonFolderPath(), "bootloader.bin");
-        }
-        
-        public string GetPartitionsPath()
-        {
-            return Path.Combine(GetCommonFolderPath(), "partitions.bin");
-        }
-        
-        public bool HasSharedFiles()
-        {
-            return File.Exists(GetBootloaderPath()) && File.Exists(GetPartitionsPath());
+            _buildInfoParser = new BuildInfoParser(logger);
+            Directory.CreateDirectory(_firmwareFolder);
         }
         
         public List<FirmwareItem> ScanLocalFirmwares()
@@ -59,16 +34,20 @@ namespace ESPFlasher.Services
                 {
                     var folderName = Path.GetFileName(subfolder);
                     
-                    if (folderName == CommonFolderName)
+                    // Skip non-firmware folders
+                    if (!folderName.StartsWith("firmware-"))
                         continue;
                     
-                    var firmwarePath = Path.Combine(subfolder, "firmware.bin");
+                    // Extract version from folder name: firmware-20260108.4 -> 20260108.4
+                    var version = folderName.Replace("firmware-", "");
+                    
+                    // Expected binary name: scanin-datalogger-20260108.4.bin
+                    var firmwarePath = Path.Combine(subfolder, $"scanin-datalogger-{version}.bin");
+                    var buildInfoPath = Path.Combine(subfolder, "build-info.txt");
                     
                     if (File.Exists(firmwarePath))
                     {
                         var fileInfo = new FileInfo(firmwarePath);
-                        var version = folderName.TrimStart('v');
-                        
                         var item = new FirmwareItem
                         {
                             Name = folderName,
@@ -80,6 +59,23 @@ namespace ESPFlasher.Services
                             Date = fileInfo.LastWriteTime,
                             IsComplete = true
                         };
+                        
+                        // Parse build-info.txt if available
+                        if (File.Exists(buildInfoPath))
+                        {
+                            var buildInfo = _buildInfoParser.ParseBuildInfoFile(buildInfoPath);
+                            if (buildInfo != null)
+                            {
+                                item.BuildNumber = buildInfo.BuildNumber;
+                                item.GitCommit = buildInfo.GitCommit;
+                                item.GitBranch = buildInfo.GitBranch;
+                                item.FirmwareSize = buildInfo.FirmwareSize;
+                                if (buildInfo.BuildDate != DateTime.MinValue)
+                                {
+                                    item.Date = buildInfo.BuildDate;
+                                }
+                            }
+                        }
                         
                         items.Add(item);
                     }
@@ -144,13 +140,13 @@ namespace ESPFlasher.Services
         
         public string GetFirmwareFolderPath(string version)
         {
-            var folderName = version.StartsWith("v") ? version : $"v{version}";
+            var folderName = $"firmware-{version}";
             return Path.Combine(_firmwareFolder, folderName);
         }
         
         public string GetFirmwareBinPath(string version)
         {
-            return Path.Combine(GetFirmwareFolderPath(version), "firmware.bin");
+            return Path.Combine(GetFirmwareFolderPath(version), $"scanin-datalogger-{version}.bin");
         }
         
         public bool ValidateFirmwareForFlashing(FirmwareItem item)
@@ -159,9 +155,6 @@ namespace ESPFlasher.Services
                 return false;
             
             if (!File.Exists(item.LocalPath))
-                return false;
-            
-            if (!HasSharedFiles())
                 return false;
             
             return true;

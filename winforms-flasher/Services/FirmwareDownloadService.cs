@@ -31,10 +31,12 @@ namespace ESPFlasher.Services
 
         public async Task<string> DownloadFirmwareAsync(FirmwareVersion firmware)
         {
-            var versionFolder = Path.Combine(_downloadDirectory, firmware.LocalFolderName);
+            // New structure: firmware-20260108.4/scanin-datalogger-20260108.4.bin
+            var version = firmware.Version.TrimStart('v');
+            var versionFolder = Path.Combine(_downloadDirectory, $"firmware-{version}");
             Directory.CreateDirectory(versionFolder);
             
-            var firmwarePath = Path.Combine(versionFolder, "firmware.bin");
+            var firmwarePath = Path.Combine(versionFolder, $"scanin-datalogger-{version}.bin");
             
             if (IsFirmwareDownloaded(firmware))
             {
@@ -47,8 +49,6 @@ namespace ESPFlasher.Services
             try
             {
                 await DownloadFileAsync(firmware.FirmwareUrl, firmwarePath, firmware.FileSize);
-                
-                await EnsureSharedFilesDownloadedAsync(firmware);
 
                 _logger.LogInformation($"Firmware {firmware.Version} downloaded successfully to {versionFolder}");
                 return firmwarePath;
@@ -63,27 +63,6 @@ namespace ESPFlasher.Services
                 }
                 
                 throw;
-            }
-        }
-        
-        private async Task EnsureSharedFilesDownloadedAsync(FirmwareVersion firmware)
-        {
-            var commonFolder = Path.Combine(_downloadDirectory, "_common");
-            Directory.CreateDirectory(commonFolder);
-            
-            var bootloaderPath = Path.Combine(commonFolder, "bootloader.bin");
-            var partitionsPath = Path.Combine(commonFolder, "partitions.bin");
-            
-            if (!File.Exists(bootloaderPath) && !string.IsNullOrEmpty(firmware.BootloaderUrl))
-            {
-                _logger.LogInformation("Downloading shared bootloader.bin");
-                await DownloadFileAsync(firmware.BootloaderUrl, bootloaderPath, 0);
-            }
-            
-            if (!File.Exists(partitionsPath) && !string.IsNullOrEmpty(firmware.PartitionsUrl))
-            {
-                _logger.LogInformation("Downloading shared partitions.bin");
-                await DownloadFileAsync(firmware.PartitionsUrl, partitionsPath, 0);
             }
         }
         
@@ -153,15 +132,18 @@ namespace ESPFlasher.Services
 
         public bool IsFirmwareDownloaded(FirmwareVersion firmware)
         {
-            var versionFolder = Path.Combine(_downloadDirectory, firmware.LocalFolderName);
-            var firmwarePath = Path.Combine(versionFolder, "firmware.bin");
+            var version = firmware.Version.TrimStart('v');
+            var versionFolder = Path.Combine(_downloadDirectory, $"firmware-{version}");
+            var firmwarePath = Path.Combine(versionFolder, $"scanin-datalogger-{version}.bin");
+            
             return File.Exists(firmwarePath);
         }
         
         public string GetLocalFirmwarePath(FirmwareVersion firmware)
         {
-            var versionFolder = Path.Combine(_downloadDirectory, firmware.LocalFolderName);
-            return Path.Combine(versionFolder, "firmware.bin");
+            var version = firmware.Version.TrimStart('v');
+            var versionFolder = Path.Combine(_downloadDirectory, $"firmware-{version}");
+            return Path.Combine(versionFolder, $"scanin-datalogger-{version}.bin");
         }
 
         public async Task<bool> ValidateFirmwareFileAsync(string filePath, FirmwareVersion firmware)

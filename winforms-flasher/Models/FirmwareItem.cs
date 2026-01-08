@@ -11,11 +11,16 @@ namespace ESPFlasher.Models
         public DateTime Date { get; set; }
         public string Description { get; set; } = string.Empty;
         
+        public int BuildNumber { get; set; }
+        public string GitCommit { get; set; } = string.Empty;
+        public string GitBranch { get; set; } = string.Empty;
+        public string FirmwareSize { get; set; } = string.Empty;
+        
         public FirmwareVersion? CloudMetadata { get; set; }
         
         public bool IsComplete { get; set; }
         
-        public string DisplayName => string.IsNullOrEmpty(Version) ? Name : $"v{Version}";
+        public string DisplayName => string.IsNullOrEmpty(Version) ? Name : Version;
         
         public string StatusIcon => Status switch
         {
@@ -33,9 +38,13 @@ namespace ESPFlasher.Models
             _ => "Unknown"
         };
         
-        public string DateText => Date.ToString("yyyy-MM-dd");
+        public string DateText => Date.ToString("yyyy-MM-dd HH:mm");
         
         public string ListViewText => $"{StatusIcon} {DisplayName}";
+        
+        public string DetailText => BuildNumber > 0 
+            ? $"Build #{BuildNumber} | {FirmwareSize} | {GitCommit}" 
+            : FirmwareSize;
     }
     
     public enum FirmwareSource

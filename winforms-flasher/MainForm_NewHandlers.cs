@@ -139,7 +139,17 @@ namespace ESPFlasher
             }
             
             lblSelectedFirmwareName.Text = _selectedFirmware.DisplayName;
-            lblSelectedFirmwareDate.Text = $"Date: {_selectedFirmware.DateText} | Source: {_selectedFirmware.SourceText}";
+            
+            // Show build date and metadata
+            var dateInfo = $"Built: {_selectedFirmware.DateText}";
+            if (!string.IsNullOrEmpty(_selectedFirmware.DetailText))
+            {
+                lblSelectedFirmwareDate.Text = $"{dateInfo} | {_selectedFirmware.DetailText}";
+            }
+            else
+            {
+                lblSelectedFirmwareDate.Text = $"{dateInfo} | Source: {_selectedFirmware.SourceText}";
+            }
             
             if (_selectedFirmware.Status == FirmwareStatus.Downloaded)
             {
@@ -207,16 +217,9 @@ namespace ESPFlasher
         {
             bool hasFirmware = _selectedFirmware != null && _selectedFirmware.Status == FirmwareStatus.Downloaded;
             bool hasDevice = listBoxDevices.SelectedItem != null;
-            bool hasSharedFiles = _libraryService.HasSharedFiles();
             bool notFlashing = _flashCancellationTokenSource == null;
             
-            btnFlash.Enabled = hasFirmware && hasDevice && hasSharedFiles && notFlashing;
-            
-            if (!hasSharedFiles && hasFirmware)
-            {
-                lblSelectedFirmwareStatus.Text = "⚠ Missing shared bootloader/partitions";
-                lblSelectedFirmwareStatus.ForeColor = System.Drawing.Color.Red;
-            }
+            btnFlash.Enabled = hasFirmware && hasDevice && notFlashing;
         }
     }
 }
