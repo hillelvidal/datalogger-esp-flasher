@@ -385,20 +385,6 @@ namespace ESPFlasher
         
         private void SaveSettings()
         {
-            try
-            {
-                var settings = new Dictionary<string, string>
-                {
-                    ["LastFirmwareFolder"] = _lastFirmwareFolder ?? ""
-                };
-                var json = Newtonsoft.Json.JsonConvert.SerializeObject(settings, Newtonsoft.Json.Formatting.Indented);
-                File.WriteAllText(SettingsFile, json);
-                _logger.LogInformation("Settings saved");
-            }
-            catch (Exception ex)
-            {
-                _logger.LogWarning(ex, "Failed to save settings");
-            }
         }
 
         private void TabControl_SelectedIndexChanged(object? sender, EventArgs e)
