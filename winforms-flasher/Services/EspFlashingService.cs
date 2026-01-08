@@ -168,12 +168,23 @@ namespace ESPFlasher.Services
             }
         }
 
-        private async Task<string> RunEsptoolAsync(string arguments, CancellationToken cancellationToken, bool trackProgress = false)
+        private async Task<string> RunEsptoolAsync(string args, CancellationToken cancellationToken, bool trackProgress = false)
         {
+            _logger.LogInformation($"Running esptool: {_esptoolPath} {args}");
+            
+            // Write command to debug file
+            var debugFile = Path.Combine(Path.GetTempPath(), "esptool_debug.txt");
+            try
+            {
+                File.AppendAllText(debugFile, $"\n\n=== {DateTime.Now:yyyy-MM-dd HH:mm:ss} ===\n");
+                File.AppendAllText(debugFile, $"Command: {_esptoolPath} {args}\n\n");
+            }
+            catch { }
+
             var startInfo = new ProcessStartInfo
             {
                 FileName = _esptoolPath,
-                Arguments = arguments,
+                Arguments = args,
                 UseShellExecute = false,
                 RedirectStandardOutput = true,
                 RedirectStandardError = true,
@@ -237,6 +248,16 @@ namespace ESPFlasher.Services
             var stdErr = error.ToString();
             var fullOutput = stdOut + stdErr;
             
+            // Write output to debug file
+            var debugFile = Path.Combine(Path.GetTempPath(), "esptool_debug.txt");
+            try
+            {
+                File.AppendAllText(debugFile, $"Exit Code: {process.ExitCode}\n");
+                File.AppendAllText(debugFile, $"STDOUT:\n{stdOut}\n");
+                File.AppendAllText(debugFile, $"STDERR:\n{stdErr}\n");
+            }
+            catch { }
+            
             if (process.ExitCode != 0)
             {
                 _logger.LogError($"esptool failed with exit code {process.ExitCode}");
@@ -259,6 +280,8 @@ namespace ESPFlasher.Services
                 {
                     errorMsg += "No output captured from esptool.exe";
                 }
+                
+                errorMsg += $"\n\nDebug log: {debugFile}";
                 
                 throw new InvalidOperationException(errorMsg);
             }
