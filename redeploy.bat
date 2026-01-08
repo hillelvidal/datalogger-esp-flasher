@@ -114,12 +114,13 @@ if exist "firebase-config.json.template" copy "firebase-config.json.template" "p
 if exist "README.md" copy "README.md" "publish\README.md" >nul 2>&1
 if exist "flash.ico" copy "flash.ico" "publish\flash.ico" >nul 2>&1
 
-REM Check if esptool.exe exists
+REM Check if esptool.exe exists and copy to both locations
 if not exist "esptool.exe" (
-    echo [WARNING] esptool.exe not found
+    echo [WARNING] esptool.exe not found in winforms-flasher directory
 ) else (
     copy "esptool.exe" "publish\esptool.exe" >nul 2>&1
-    echo Copied esptool.exe to publish directory
+    copy "esptool.exe" "bin\Release\net8.0-windows\esptool.exe" >nul 2>&1
+    echo Copied esptool.exe to output directories
 )
 
 echo.
