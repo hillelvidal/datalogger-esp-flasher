@@ -202,7 +202,7 @@ namespace ESPFlasher
             }
         }
         
-        private new void UpdateFlashButtonState()
+        private void UpdateFlashButtonState()
         {
             bool hasFirmware = _selectedFirmware != null && _selectedFirmware.Status == FirmwareStatus.Downloaded;
             bool hasDevice = listBoxDevices.SelectedItem != null;

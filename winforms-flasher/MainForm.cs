@@ -165,16 +165,6 @@ namespace ESPFlasher
             }
         }
 
-        private void UpdateFlashButtonState()
-        {
-            bool hasValidLocalFirmware = !string.IsNullOrEmpty(_localFirmwarePath);
-            bool hasCloudFirmware = cmbFirmwareVersion.SelectedItem is FirmwareVersion;
-            bool hasFirmware = hasValidLocalFirmware || hasCloudFirmware;
-            bool hasDevice = listBoxDevices.SelectedItem != null;
-            bool notFlashing = _flashCancellationTokenSource == null;
-            
-            btnFlash.Enabled = hasFirmware && hasDevice && notFlashing;
-        }
 
         private async void btnFlash_Click(object sender, EventArgs e)
         {
